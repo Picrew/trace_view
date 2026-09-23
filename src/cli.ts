@@ -72,6 +72,26 @@ function openBrowser(url: string): void {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  const port = args.port ?? 7860;
+
+  // Single instance: if a trace-review server already answers on the port,
+  // just open the browser instead of spawning a second one.
+  if (!args.noOpen) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/health`);
+      if (res.ok) {
+        const body = (await res.json()) as { name?: string };
+        if (body.name === 'trace-review') {
+          console.log(`trace-review is already running on port ${port} — opening ${`http://127.0.0.1:${port}`}`);
+          openBrowser(`http://127.0.0.1:${port}`);
+          process.exit(0);
+        }
+      }
+    } catch {
+      /* not running — proceed */
+    }
+  }
+
   const server = await createTraceReviewServer({
     port: args.port,
     claudeDir: args.claudeDir,

@@ -355,7 +355,18 @@ export function App(): JSX.Element {
             {run.live && <span className="live-badge">LIVE</span>}
           </>
         )}
-        <span className="status-right">local only · no telemetry</span>
+        <span className="status-right">
+          local only · no telemetry
+          <button
+            className="quit-btn"
+            title="Stop the local trace-review server"
+            onClick={() => {
+              void api.quit().catch(() => undefined);
+            }}
+          >
+            ⏻ Quit
+          </button>
+        </span>
       </footer>
     </div>
   );

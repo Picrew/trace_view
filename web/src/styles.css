@@ -1534,3 +1534,16 @@ input::placeholder {
   padding: 0 5px;
   border-radius: 4px;
 }
+
+.quit-btn {
+  margin-left: 12px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+}
+.quit-btn:hover {
+  color: var(--red);
+  border-color: var(--red);
+}

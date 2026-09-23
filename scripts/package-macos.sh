@@ -98,7 +98,9 @@ cat > build/icon.svg <<'EOF'
   <circle cx="758" cy="308" r="34" fill="#b5f5ec"/>
 </svg>
 EOF
-if qlmanage -t -s 1024 build/icon.svg -o build/ >/dev/null 2>&1 && [ -f build/icon.svg.png ]; then
+# Render via headless Chrome: qlmanage fills transparent areas with opaque
+# white, which appears as a white frame in the Dock.
+if npx tsx scripts/render-icon.ts >/dev/null 2>&1 && [ -f build/icon.svg.png ]; then
   # Generate the full iconset with REAL @2x bitmaps (a 1x image copied into an
   # @2x slot renders blurry on Retina displays).
   for size in 16 32 128 256 512; do
@@ -133,6 +135,9 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+  <!-- Background agent: no Dock icon (a windowless foreground app would
+       bounce in the Dock forever). Quit via the button in the web UI. -->
+  <key>LSUIElement</key><true/>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 $( [ "$ICON_OK" = "1" ] && { cp build/app-icon.icns "$APP/Contents/Resources/icon.icns"; echo '  <key>CFBundleIconFile</key><string>icon.icns</string>'; } )
 </dict>

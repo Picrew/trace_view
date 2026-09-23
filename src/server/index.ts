@@ -153,6 +153,14 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return sendJson(res, 200, { imported: summary.length, sessions: summary });
   }
 
+  if (pathname === '/api/quit' && method === 'POST') {
+    // Local-only tool: the web UI's power button calls this to stop the
+    // server (the app is a background agent without a Dock icon).
+    sendJson(res, 200, { ok: true, bye: true });
+    setTimeout(() => process.exit(0), 150);
+    return;
+  }
+
   const runMatch = /^\/api\/runs\/([^/]+)(?:\/(events|stream|search|raw))?(?:\/([^/]+))?$/.exec(pathname);
   if (runMatch && method === 'GET') {
     const runId = runMatch[1];

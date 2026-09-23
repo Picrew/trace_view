@@ -54,6 +54,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path }),
     }),
+  quit: () => json<{ ok: boolean }>('/api/quit', { method: 'POST' }),
 };
 
 export function openStream(
