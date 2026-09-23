@@ -520,7 +520,7 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
         exitCode = typeof r.exitCode === 'number' ? r.exitCode : undefined;
       } else if (Array.isArray(r.structuredPatch)) {
         resultKind = toolName === 'Write' ? 'write' : 'edit';
-        structuredPatch = r.structuredPatch as StructuredPatch[];
+        structuredPatch = normalizePatches(r.structuredPatch);
         filePath = typeof r.filePath === 'string' ? r.filePath : undefined;
         const counts = countPatchLines(structuredPatch.flatMap((p) => p.hunks ?? []));
         additions = counts.additions;
@@ -591,6 +591,24 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
     if (pending) state.pendingCalls.delete(callId);
     return events;
   }
+}
+
+/**
+ * structuredPatch appears in TWO on-disk shapes depending on CLI version:
+ *  - wrapped: [{ oldFile, newFile, hunks: [{…}] }]
+ *  - bare:    [{ oldStart, oldLines, newStart, newLines, lines }]  (newer CLI)
+ * Normalize both to the wrapped form.
+ */
+function normalizePatches(raw: any[]): StructuredPatch[] {
+  if (raw.length === 0) return raw as StructuredPatch[];
+  const first = raw[0];
+  if (first && typeof first === 'object' && Array.isArray(first.hunks)) {
+    return raw as StructuredPatch[];
+  }
+  if (first && typeof first === 'object' && Array.isArray(first.lines)) {
+    return [{ hunks: raw }]; // bare hunk list
+  }
+  return raw as StructuredPatch[];
 }
 
 function addUsage(target: ReturnType<typeof emptyUsage>, usage: Record<string, any>): void {

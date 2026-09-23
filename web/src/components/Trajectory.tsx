@@ -534,7 +534,7 @@ function PatchView({ patches }: { patches: StructuredPatch[] }): JSX.Element {
       {patches.map((p, i) => (
         <div key={i}>
           {p.newFile && <div className="patch-file mono">{p.newFile}</div>}
-          {p.hunks.map((h, j) => (
+          {(p.hunks ?? []).map((h, j) => (
             <pre key={j} className="patch-hunk mono">
               {h.lines.map((line, k) => (
                 <div key={k} className={`patch-line ${line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : ''}`}>

@@ -135,6 +135,11 @@ describe('ClaudeAdapter', () => {
     const causedBy = fc[0].causedByEventId;
     const call = events.find((e) => e.id === causedBy);
     expect(call?.kind).toBe('tool_call');
+    // The fixture uses the newer bare-hunk structuredPatch shape — it must be
+    // normalized to {hunks: [...]} so the UI never crashes on p.hunks.map.
+    const editResult = events.find((e): e is any => e.kind === 'tool_result' && e.callId === 'toolu_2');
+    expect(editResult.structuredPatch[0].hunks).toHaveLength(1);
+    expect(editResult.structuredPatch[0].hunks[0].lines).toHaveLength(3);
   });
 
   it('captures api errors with retry info', () => {
