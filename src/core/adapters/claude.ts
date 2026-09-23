@@ -113,7 +113,7 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
         state.uuidKinds.set(String(o.uuid), 'user');
         const content = o.message?.content;
         if (typeof content === 'string') {
-          events.push(...this.parseUserString(o, content, mkEvent, state, ctx));
+          events.push(...this.parseUserString(o, content, false, mkEvent, state, ctx));
         } else if (Array.isArray(content)) {
           for (const block of content) {
             if (block && typeof block === 'object' && block.type === 'tool_result') {
@@ -121,21 +121,16 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
             }
           }
           if (events.length === 0) {
-            // Array content without tool_result blocks (rare) — keep as synthetic.
+            // No tool_result blocks: a normal message with text and/or pasted
+            // images (e.g. a screenshot + caption). These are REAL user input
+            // — treat them exactly like string content.
             const text = content
               .map((b: any) => (typeof b?.text === 'string' ? b.text : ''))
               .join('\n')
               .trim();
-            if (text) {
-              const t = truncate(text, ctx.textLimit);
-              events.push(
-                mkEvent({
-                  kind: 'synthetic_message',
-                  text: t.text,
-                  truncated: t.truncated,
-                  syntheticKind: 'injected',
-                }) as SyntheticMessageEvent,
-              );
+            const hasImages = content.some((b: any) => b?.type === 'image');
+            if (text || hasImages) {
+              events.push(...this.parseUserString(o, text || '(image message)', hasImages, mkEvent, state, ctx));
             }
           }
         }
@@ -386,6 +381,7 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
   private parseUserString(
     o: Record<string, any>,
     content: string,
+    hasImages: boolean,
     mkEvent: (over: Record<string, unknown>) => TraceEvent,
     state: ClaudeState,
     ctx: ParseCtx,
@@ -437,23 +433,27 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
           kind: 'user_message',
           text: t.text,
           truncated: t.truncated,
+          hasImages: hasImages || undefined,
           source: { provider, rawType: 'user', rawSubtype: 'human' },
         }) as UserMessageEvent,
       ];
     }
-    // 5. No origin info (older versions) — heuristic.
+    // 5. No origin info (older versions) — heuristic. Messages carrying
+    // images are always genuine user input.
     const lower = content.trim().toLowerCase();
     const looksInjected =
-      CONTINUATION_PREFIXES.some((p) => lower.startsWith(p)) ||
-      content.startsWith('<system-reminder>') ||
-      content.startsWith('<command-name>') ||
-      content.startsWith('Caveat:');
+      !hasImages &&
+      (CONTINUATION_PREFIXES.some((p) => lower.startsWith(p)) ||
+        content.startsWith('<system-reminder>') ||
+        content.startsWith('<command-name>') ||
+        content.startsWith('Caveat:'));
     return [
       mkEvent({
         kind: looksInjected ? 'synthetic_message' : 'user_message',
         text: t.text,
         truncated: t.truncated,
         syntheticKind: looksInjected ? 'continuation' : undefined,
+        hasImages: !looksInjected && hasImages ? true : undefined,
         source: {
           provider,
           rawType: 'user',

@@ -73,15 +73,31 @@ describe('ClaudeAdapter', () => {
       'system',
       'system',
       'unknown',
+      'user_message',
+      'synthetic_message',
     ]);
+  });
+
+  it('classifies image-bearing user messages as REAL user input', () => {
+    // Regression: messages with pasted images have array content
+    // ([text, image]) — they used to fall into the synthetic fallback.
+    const imgMsg = events.find(
+      (e) => e.kind === 'user_message' && (e as any).text.includes('screenshot'),
+    ) as any;
+    expect(imgMsg).toBeTruthy();
+    expect(imgMsg.hasImages).toBe(true);
+    // The isMeta image-cache echo right after it IS synthetic.
+    const echo = events.filter((e) => e.kind === 'synthetic_message').find((e: any) => (e as any).text.includes('[Image: source'));
+    expect(echo).toBeTruthy();
+    expect((echo as any).syntheticKind).toBe('meta');
   });
 
   it('classifies human vs synthetic user messages', () => {
     const users = events.filter((e) => e.kind === 'user_message');
-    expect(users).toHaveLength(2);
+    expect(users).toHaveLength(3);
     expect(users[0]).toMatchObject({ text: 'Fix the login bug in auth.ts' });
     const synth = events.filter((e) => e.kind === 'synthetic_message');
-    expect(synth.map((s: any) => s.syntheticKind).sort()).toEqual(['compact-summary', 'meta']);
+    expect(synth.map((s: any) => s.syntheticKind).sort()).toEqual(['compact-summary', 'meta', 'meta']);
     const compact = synth.find((s: any) => s.syntheticKind === 'compact-summary')!;
     expect(compact.text).toContain('This session is being continued');
     const meta = synth.find((s: any) => s.syntheticKind === 'meta')!;
@@ -243,8 +259,8 @@ describe('parseTraceFile (integration)', () => {
     expect(run.gitBranch).toBe('main');
     expect(run.models.sort()).toEqual(['claude-opus-4-8', 'claude-sonnet-5']);
     expect(run.startedAt).toBe('2026-09-20T10:00:00.000Z');
-    expect(run.endedAt).toBe('2026-09-20T10:00:31.000Z');
-    expect(run.durationMs).toBe(31000);
+    expect(run.endedAt).toBe('2026-09-20T10:00:32.100Z');
+    expect(run.durationMs).toBe(32100);
     expect(run.usage).toMatchObject({
       inputTokens: 14800,
       outputTokens: 140,
@@ -254,9 +270,9 @@ describe('parseTraceFile (integration)', () => {
       modelRequests: 6,
     });
     expect(run.stats).toMatchObject({
-      events: 28,
-      userMessages: 2,
-      syntheticMessages: 2,
+      events: 30,
+      userMessages: 3,
+      syntheticMessages: 3,
       assistantMessages: 4,
       reasoning: 1,
       toolCalls: 3,
@@ -279,6 +295,9 @@ describe('parseTraceFile (integration)', () => {
     });
     // seq continuity
     expect(events[events.length - 1].seq).toBe(events.length - 1);
+    // image-bearing user message is REAL user input with hasImages
+    const imgUser = events.find((e) => e.kind === 'user_message' && (e as any).hasImages) as any;
+    expect(imgUser.text).toContain('screenshot');
     // raw JSON retrieval by loc
     const firstUser = events.find((e) => e.kind === 'user_message')!;
     const raw = (await readEventRaw(handle, firstUser)) as any;
@@ -331,7 +350,7 @@ describe('parseTraceFile (integration)', () => {
       const { parsed } = await parseTraceFile(tmp);
       expect(parsed.run.warnings.join(' ')).toMatch(/unparseable/);
       expect(parsed.events.some((e) => e.kind === 'unknown')).toBe(true);
-      expect(parsed.events.filter((e) => e.kind === 'user_message').length).toBe(2);
+      expect(parsed.events.filter((e) => e.kind === 'user_message').length).toBe(3);
     } finally {
       await fs.rm(tmp);
     }

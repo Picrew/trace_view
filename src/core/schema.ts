@@ -93,6 +93,8 @@ export type TraceEventKind =
 export interface UserMessageEvent extends BaseEvent {
   kind: 'user_message';
   text: string;
+  /** Message included pasted/attached images in addition to text. */
+  hasImages?: boolean;
   truncated?: boolean;
 }
 

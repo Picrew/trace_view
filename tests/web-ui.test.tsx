@@ -76,6 +76,8 @@ function installFetchMock() {
             project: 'proj',
             filePath: FIXTURE,
             fileName: 'claude-basic.jsonl',
+            // Force non-live: a freshly touched fixture would otherwise open
+            // an SSE stream this jsdom harness doesn't provide.
             live: false,
           },
         ],
@@ -85,7 +87,7 @@ function installFetchMock() {
     }
     if (u === `/api/runs/${handle.parsed.run.id}`) {
       return json({
-        run: handle.parsed.run,
+        run: { ...handle.parsed.run, live: false },
         spans: handle.parsed.spans,
         fileChanges: handle.parsed.fileChanges,
       });
@@ -146,11 +148,15 @@ describe('web UI (jsdom render)', () => {
     // Trajectory rows render in the visible virtual window.
     await waitFor(() => container.querySelectorAll('.tool-row').length >= 1);
     const text = container.textContent!;
-    expect(text).toContain('Now run the tests');
+    // Image-bearing user message renders as REAL user input with the 🖼 badge.
+    expect(text).toContain('Here is a screenshot of the bug');
+    expect(container.querySelector('.img-badge')).toBeTruthy();
     expect(text).toContain('Bash');
     expect(text).toContain('npm test');
-    // Request boundary divider with model + duration
-    expect(text).toMatch(/Request \d+ · claude-\S+ · 14s/);
+    // Request boundary dividers with model names render
+    expect(text).toMatch(/Request \d+ · claude-\S+/);
+    // tool durations render (Bash 14000ms)
+    expect(text).toContain('14s');
     // synthetic (continuing) message — the core feature
     expect(text).toContain('synthetic');
     expect(text).toContain('Your response above was cut off mid-stream. (continuing)');

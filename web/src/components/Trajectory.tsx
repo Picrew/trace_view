@@ -251,6 +251,7 @@ function MessageRow({
   selected: boolean;
   onSelect: (id: string) => void;
 }): JSX.Element {
+  const hasImages = (e as { hasImages?: boolean }).hasImages === true;
   return (
     <div className={`row message-row ${tone} ${selected ? 'selected' : ''}`} onClick={() => onSelect(e.id)}>
       <div className="row-gutter">
@@ -260,6 +261,7 @@ function MessageRow({
         <div className="row-label">
           {tone === 'user' ? '● ' : '◆ '}
           {label}
+          {hasImages && <span className="img-badge" title="message included pasted images">🖼 {tone === 'user' ? '' : ''}</span>}
           {model && <span className="row-model">{model}</span>}
         </div>
         <div className="message-text">

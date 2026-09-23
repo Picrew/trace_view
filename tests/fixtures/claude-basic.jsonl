@@ -20,3 +20,5 @@
 {"type":"mode","sessionId":"sess-1","mode":"acceptEdits"}
 {"type":"queue-operation","sessionId":"sess-1","timestamp":"2026-09-20T10:00:30.000Z","operation":"enqueue"}
 {"type":"future-thing","uuid":"f1","sessionId":"sess-1","timestamp":"2026-09-20T10:00:31.000Z","cwd":"/Users/demo/proj","gitBranch":"main","isSidechain":false,"payload":{"new":"field"}}
+{"type":"user","uuid":"u10","parentUuid":"a8","sessionId":"sess-1","timestamp":"2026-09-20T10:00:32.000Z","cwd":"/Users/demo/proj","gitBranch":"main","isSidechain":false,"promptId":"p3","origin":{"kind":"human"},"promptSource":"typed","message":{"role":"user","content":[{"type":"text","text":"Here is a screenshot of the bug:"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"iVBORw0KGgo="}}]}}
+{"type":"user","uuid":"u11","parentUuid":"u10","sessionId":"sess-1","timestamp":"2026-09-20T10:00:32.100Z","cwd":"/Users/demo/proj","gitBranch":"main","isSidechain":false,"isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"[Image: source: /tmp/claude/icon.png]"}]}}

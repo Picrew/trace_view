@@ -62,6 +62,10 @@ export function openStream(
   onBatch: (msg: { events: TraceEvent[]; run: TraceRun; spans: TimelineSpan[]; fileChanges: FileChangeSummary[] }) => void,
   onReset: () => void,
 ): () => void {
+  if (typeof EventSource === 'undefined') {
+    // Environment without SSE (very old browsers, test DOMs) — no live tail.
+    return () => undefined;
+  }
   const es = new EventSource(
     `/api/runs/${encodeURIComponent(runId)}/stream?cursor=${cursor}`,
   );
