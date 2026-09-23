@@ -1,6 +1,6 @@
 {
   "name": "trace-review",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Local-first Agent Trace Review — inspect, search and review coding agent traces (Claude Code, Codex, generic JSONL). All data stays local.",
   "type": "module",
   "license": "MIT",
@@ -17,6 +17,7 @@
     "build:web": "vite build",
     "start": "node dist/cli.js",
     "test": "vitest run",
+    "package:mac": "bash scripts/package-macos.sh",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.web.json --noEmit"
   },

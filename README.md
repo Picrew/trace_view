@@ -27,6 +27,14 @@
 
 ## 快速开始
 
+**macOS(Apple Silicon)**:从 [Releases](https://github.com/Picrew/trace_view/releases) 下载 `Trace-Review-<ver>-arm64.dmg`,拖入 Applications 即可 — 自包含 Node 运行时,无需安装任何依赖。首次打开若被 Gatekeeper 拦截(未签名),右键 → 打开,或:
+
+```bash
+xattr -d com.apple.quarantine "/Applications/Trace Review.app"
+```
+
+**从源码运行**:
+
 ```bash
 npm install
 npm run build
@@ -60,7 +68,9 @@ npm run dev        # vite(5173,代理 /api)+ tsx watch
 ```bash
 npm test           # 33 个测试(parsers / run-builder / API / UI 渲染 / live tail)
 npm run typecheck  # server + web 双 tsconfig
-node scripts/bench-parse.ts   # 用本机最大的真实 trace 跑解析基准
+npx tsx scripts/e2e-check.ts  # 真实浏览器 e2e(需 Chrome)
+node scripts/bench-parse.ts    # 用本机最大的真实 trace 跑解析基准
+npm run package:mac            # 打包 .app + .dmg(Node SEA 单文件,无需用户装 Node)
 ```
 
 ## 架构

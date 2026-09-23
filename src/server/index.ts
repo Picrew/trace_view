@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseUrl } from 'node:url';
@@ -16,10 +17,29 @@ import {
   sendJson,
   stripForTransport,
 } from './api.js';
+import { APP_VERSION } from '../version.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// dist/server/index.js → dist/web (after `npm run build:web`)
-const WEB_ROOT = path.resolve(__dirname, '../web');
+// Works both in ESM (tsc output: import.meta.url) and in a CJS bundle
+// (esbuild for the single-executable build: __dirname).
+function thisDir(): string {
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return typeof __dirname === 'string' ? __dirname : process.cwd();
+  }
+}
+const __dirname = thisDir();
+
+// Web bundle location depends on how the server runs:
+//   dev/build (dist/server/index.js)      → ../web       (dist/web)
+//   single-file bundle (SEA, this file)   → ../web       (dist/web, exe in dist/)
+//   macOS .app (Contents/MacOS/<bin>)     → ../Resources/app/web
+const WEB_ROOT_CANDIDATES = [
+  path.resolve(__dirname, '../web'),
+  path.resolve(__dirname, 'web'),
+  path.resolve(__dirname, '../Resources/app/web'),
+];
+const WEB_ROOT = WEB_ROOT_CANDIDATES.find((p) => existsSync(p)) ?? WEB_ROOT_CANDIDATES[0];
 
 export const DEFAULT_PORT = 7860;
 
@@ -110,7 +130,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
   // --- API ---
   if (pathname === '/api/health' && method === 'GET') {
-    return sendJson(res, 200, { ok: true, name: 'trace-review', version: '0.1.0' });
+    return sendJson(res, 200, { ok: true, name: 'trace-review', version: APP_VERSION });
   }
 
   if (pathname === '/api/library' && method === 'GET') {
