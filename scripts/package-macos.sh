@@ -74,49 +74,37 @@ cat > build/icon.svg <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1d2432"/>
-      <stop offset="1" stop-color="#0b0e15"/>
+      <stop offset="0" stop-color="#26304a"/>
+      <stop offset="1" stop-color="#0b0e16"/>
     </linearGradient>
-    <linearGradient id="trace" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#4c8dff"/>
-      <stop offset="0.55" stop-color="#39c5cf"/>
-      <stop offset="1" stop-color="#7ee787"/>
+    <linearGradient id="stroke" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#5b9dff"/>
+      <stop offset="1" stop-color="#2fd4de"/>
     </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8ff0e6" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#8ff0e6" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
-  <rect x="10" y="10" width="1004" height="1004" rx="219" fill="none" stroke="#2c3547" stroke-width="5" opacity="0.9"/>
-  <!-- timeline lanes -->
-  <g stroke="#28324a" stroke-width="3" opacity="0.6">
-    <line x1="170" y1="352" x2="854" y2="352"/>
-    <line x1="170" y1="512" x2="854" y2="512"/>
-    <line x1="170" y1="672" x2="854" y2="672"/>
-  </g>
-  <g stroke="#28324a" stroke-width="3" opacity="0.35">
-    <line x1="170" y1="272" x2="170" y2="752"/>
-    <line x1="512" y1="272" x2="512" y2="752"/>
-    <line x1="854" y1="272" x2="854" y2="752"/>
-  </g>
-  <!-- ascending trace across lanes -->
-  <path d="M 170 672 H 320 C 410 672 414 512 504 512 H 560 C 660 512 664 352 764 352 H 854"
-        fill="none" stroke="url(#trace)" stroke-width="50"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- nodes -->
-  <circle cx="170" cy="672" r="38" fill="#0b0e15" stroke="#4c8dff" stroke-width="17"/>
-  <circle cx="504" cy="512" r="30" fill="#0b0e15" stroke="#39c5cf" stroke-width="14"/>
-  <circle cx="854" cy="352" r="42" fill="#7ee787"/>
-  <circle cx="854" cy="352" r="66" fill="none" stroke="#7ee787" stroke-width="7" opacity="0.35"/>
+  <!-- macOS icon grid: content area 824x824 centered (100px margins),
+       corner radius ~22.5% — matches system app icon proportions. -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="109" y="109" width="806" height="806" rx="178" fill="none" stroke="#42506e" stroke-width="5" opacity="0.5"/>
+  <path d="M 258 716 C 508 716 470 308 758 308"
+        fill="none" stroke="url(#stroke)" stroke-width="62" stroke-linecap="round"/>
+  <circle cx="258" cy="716" r="30" fill="#0b0e16" stroke="#5b9dff" stroke-width="19"/>
+  <circle cx="742" cy="341" r="26" fill="#2fd4de"/>
+  <circle cx="758" cy="308" r="150" fill="url(#glow)" opacity="0.6"/>
+  <circle cx="758" cy="308" r="34" fill="#b5f5ec"/>
 </svg>
 EOF
 if qlmanage -t -s 1024 build/icon.svg -o build/ >/dev/null 2>&1 && [ -f build/icon.svg.png ]; then
-  cp build/icon.svg.png "$ICONSET/icon_512x512.png"
-  for size in 16 32 64 128 256 512; do
-    sips -z $size $size "$ICONSET/icon_512x512.png" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+  # Generate the full iconset with REAL @2x bitmaps (a 1x image copied into an
+  # @2x slot renders blurry on Retina displays).
+  for size in 16 32 128 256 512; do
+    sips -z $size $size build/icon.svg.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z $((size * 2)) $((size * 2)) build/icon.svg.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
   done
-  cp "$ICONSET/icon_512x512.png" "$ICONSET/icon_256x256@2x.png" 2>/dev/null || true
-  cp "$ICONSET/icon_512x512.png" "$ICONSET/icon_512x512@2x.png" 2>/dev/null || true
-  cp "$ICONSET/icon_16x16.png" "$ICONSET/icon_16x16@2x.png" 2>/dev/null || true
-  cp "$ICONSET/icon_32x32.png" "$ICONSET/icon_32x32@2x.png" 2>/dev/null || true
-  cp "$ICONSET/icon_128x128.png" "$ICONSET/icon_128x128@2x.png" 2>/dev/null || true
   iconutil -c icns -o build/app-icon.icns "$ICONSET" && ICON_OK=1 || ICON_OK=0
 else
   echo "  (qlmanage unavailable — shipping without custom icon)"
