@@ -1,0 +1,4 @@
+{"timestamp":"2026-09-22T08:00:00.000Z","type":"user","message":{"role":"user","content":"Hello agent"}}
+{"timestamp":"2026-09-22T08:00:01.000Z","type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi! How can I help?"}]}}
+{"timestamp":"2026-09-22T08:00:02.000Z","type":"tool_call","tool":"search","arguments":{"query":"docs"}}
+{"timestamp":"2026-09-22T08:00:03.000Z","weird":"shape"}
