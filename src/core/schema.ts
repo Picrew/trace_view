@@ -170,7 +170,7 @@ export interface ToolResultEvent extends BaseEvent {
   interrupted?: boolean;
   hasImage?: boolean;
   filePath?: string;
-  structuredPatch?: StructuredPatch;
+  structuredPatch?: StructuredPatch[];
   /** Line additions/deletions for edit/write results. */
   additions?: number;
   deletions?: number;
