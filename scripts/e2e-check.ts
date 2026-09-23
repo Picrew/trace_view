@@ -46,25 +46,28 @@ async function main(): Promise<void> {
     failed = !check('trajectory scrolls', scrolled === 2000, `scrollTop=${scrolled}`) || failed;
 
     // Tool expand + inspector — scroll until a tool row or an aggregate row
-    // (consecutive tool runs collapse into aggregates) is in view.
-    let toolHeader: import('puppeteer-core').ElementHandle | null = null;
-    for (let i = 0; i < 12 && !toolHeader; i++) {
-      toolHeader = (await page.$('.tool-row .tool-header')) ?? (await page.$('.aggregate-row .aggregate-header'));
-      if (!toolHeader) {
-        await page.evaluate(`(() => {
-          const el = document.querySelector('.trajectory');
-          // Big steps: a single user message row can be thousands of px tall.
-          el.scrollTop += 2000;
-        })()`);
-        await new Promise((r) => setTimeout(r, 250));
-      }
+    // (consecutive tool runs collapse into aggregates) is in view, then click
+    // it in-page (element handles detach when the virtualizer re-renders).
+    let clicked = false;
+    for (let i = 0; i < 15 && !clicked; i++) {
+      clicked = await page.evaluate(`(() => {
+        const el = document.querySelector('.trajectory');
+        const hdr =
+          document.querySelector('.tool-row .tool-header') ||
+          document.querySelector('.aggregate-row .aggregate-header');
+        if (!hdr) { el.scrollTop += 2000; return false; }
+        hdr.click();
+        return true;
+      })()`);
+      if (!clicked) await new Promise((r) => setTimeout(r, 250));
     }
-    if (toolHeader) {
-      await toolHeader.click();
+    if (clicked) {
       await new Promise((r) => setTimeout(r, 500));
       // Aggregates expand to flat rows — click the first one to select it.
-      const flat = await page.$('.aggregate-body .tool-row .tool-header');
-      if (flat) await flat.click();
+      await page.evaluate(`(() => {
+        const flat = document.querySelector('.aggregate-body .tool-row .tool-header');
+        if (flat) flat.click();
+      })()`);
       await new Promise((r) => setTimeout(r, 400));
       const hasInspector = (await page.$('.inspector')) !== null;
       failed = !check('inspector opens on tool click', hasInspector) || failed;

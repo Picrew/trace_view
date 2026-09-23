@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileChangeEvent, StructuredPatch, TraceEvent } from '../types.js';
 import type { Row, ToolPair } from '../rows.js';
@@ -12,16 +12,19 @@ export function Trajectory({
   selectedEventId,
   onSelect,
   autoScrollSeq,
+  live,
 }: {
   events: TraceEvent[];
   selectedEventId: string | null;
   onSelect: (eventId: string) => void;
   autoScrollSeq: number;
+  live: boolean;
 }): JSX.Element {
   const parentRef = useRef<HTMLDivElement>(null);
   const rows = useMemo(() => buildRows(events), [events]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [reasoningOpen, setReasoningOpen] = useState<Set<string>>(new Set());
+  const [follow, setFollow] = useState(true);
 
   const toggle = (key: string) => {
     setExpanded((prev) => {
@@ -78,24 +81,46 @@ export function Trajectory({
     }
   }, [selectedEventId, autoScrollSeq, indexByEvent, rows, virtualizer]);
 
-  // Auto-follow new events only when the user is already at the bottom
-  // (live tail). A fresh load starts at the top.
-  const pinnedRef = useRef(false);
+  // Live-tail auto-follow: ON while the user stays at the bottom; scrolling
+  // up pauses it and shows a "follow" pill. No invisible re-pinning — the
+  // user decides when to resume.
+  const followRef = useRef(true);
+  const suppressScrollEval = useRef(false);
   const onScroll = () => {
+    if (suppressScrollEval.current) return; // our own programmatic scroll
     const el = parentRef.current;
     if (!el) return;
-    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    if (followRef.current && !atBottom) {
+      followRef.current = false;
+      setFollow(false);
+    }
   };
+  const jumpToBottom = useCallback(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    followRef.current = true;
+    setFollow(true);
+    el.scrollTop = el.scrollHeight;
+  }, []);
   useEffect(() => {
-    if (pinnedRef.current) {
+    if (followRef.current) {
       const el = parentRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
+      if (el) {
+        // Suppress the scroll-event evaluation our own jump triggers.
+        suppressScrollEval.current = true;
+        el.scrollTop = el.scrollHeight;
+        requestAnimationFrame(() => {
+          suppressScrollEval.current = false;
+        });
+      }
     }
   }, [rows.length]);
 
   return (
-    <div className="trajectory" ref={parentRef} onScroll={onScroll}>
-      <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+    <div className="trajectory-wrap">
+      <div className="trajectory" ref={parentRef} onScroll={onScroll}>
+        <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
         {virtualizer.getVirtualItems().map((vi) => (
           <div
             key={vi.key}
@@ -128,7 +153,13 @@ export function Trajectory({
           </div>
         ))}
       </div>
-      {rows.length === 0 && <div className="trajectory-empty">No events match the current filters.</div>}
+        {rows.length === 0 && <div className="trajectory-empty">No events match the current filters.</div>}
+      </div>
+      {live && !follow && (
+        <button className="follow-btn" onClick={jumpToBottom} title="Follow live events">
+          ↓ Follow live
+        </button>
+      )}
     </div>
   );
 }

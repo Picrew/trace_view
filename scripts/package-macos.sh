@@ -72,18 +72,39 @@ ICONSET="build/icon.iconset"
 mkdir -p "$ICONSET"
 cat > build/icon.svg <<'EOF'
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
-  <rect width="1024" height="1024" rx="230" fill="#10141a"/>
-  <rect x="24" y="24" width="976" height="976" rx="212" fill="none" stroke="#232a34" stroke-width="8"/>
-  <g stroke-linecap="round" fill="none" stroke-width="46">
-    <path d="M 220 300 h 190" stroke="#4c8dff"/>
-    <path d="M 220 400 h 340" stroke="#4c8dff" opacity="0.55"/>
-    <path d="M 220 500 h 250" stroke="#4c8dff" opacity="0.35"/>
-    <path d="M 520 240 l 260 544" stroke="#3fb950"/>
-    <path d="M 640 240 l 160 336" stroke="#f0883a"/>
-    <path d="M 760 240 l 70 148" stroke="#b695f8"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2432"/>
+      <stop offset="1" stop-color="#0b0e15"/>
+    </linearGradient>
+    <linearGradient id="trace" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4c8dff"/>
+      <stop offset="0.55" stop-color="#39c5cf"/>
+      <stop offset="1" stop-color="#7ee787"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect x="10" y="10" width="1004" height="1004" rx="219" fill="none" stroke="#2c3547" stroke-width="5" opacity="0.9"/>
+  <!-- timeline lanes -->
+  <g stroke="#28324a" stroke-width="3" opacity="0.6">
+    <line x1="170" y1="352" x2="854" y2="352"/>
+    <line x1="170" y1="512" x2="854" y2="512"/>
+    <line x1="170" y1="672" x2="854" y2="672"/>
   </g>
-  <circle cx="520" cy="240" r="34" fill="#e6edf3"/>
-  <circle cx="780" cy="784" r="26" fill="#3fb950"/>
+  <g stroke="#28324a" stroke-width="3" opacity="0.35">
+    <line x1="170" y1="272" x2="170" y2="752"/>
+    <line x1="512" y1="272" x2="512" y2="752"/>
+    <line x1="854" y1="272" x2="854" y2="752"/>
+  </g>
+  <!-- ascending trace across lanes -->
+  <path d="M 170 672 H 320 C 410 672 414 512 504 512 H 560 C 660 512 664 352 764 352 H 854"
+        fill="none" stroke="url(#trace)" stroke-width="50"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- nodes -->
+  <circle cx="170" cy="672" r="38" fill="#0b0e15" stroke="#4c8dff" stroke-width="17"/>
+  <circle cx="504" cy="512" r="30" fill="#0b0e15" stroke="#39c5cf" stroke-width="14"/>
+  <circle cx="854" cy="352" r="42" fill="#7ee787"/>
+  <circle cx="854" cy="352" r="66" fill="none" stroke="#7ee787" stroke-width="7" opacity="0.35"/>
 </svg>
 EOF
 if qlmanage -t -s 1024 build/icon.svg -o build/ >/dev/null 2>&1 && [ -f build/icon.svg.png ]; then

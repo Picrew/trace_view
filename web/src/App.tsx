@@ -98,28 +98,51 @@ export function App(): JSX.Element {
   }, [loadRun]);
 
   // --- live tail ---
+  // SSE batches are merged and applied at most every 300ms — a chatty agent
+  // (or the session running THIS tool) writes many lines per second, and
+  // re-rendering the whole trajectory per batch makes the UI jitter.
   useEffect(() => {
     if (!run || !run.live || !selectedId) return;
     const cursor = events.length > 0 ? events[events.length - 1].seq : -1;
+    let pending: TraceEvent[] = [];
+    let latest: { run: TraceRun; spans: TimelineSpan[]; fileChanges: FileChangeSummary[] } | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      timer = null;
+      const fresh = pending;
+      const meta = latest;
+      pending = [];
+      latest = null;
+      if (fresh.length > 0) {
+        setEvents((prev) => {
+          const lastSeq = prev.length > 0 ? prev[prev.length - 1].seq : -1;
+          const add = fresh.filter((e) => e.seq > lastSeq);
+          return add.length > 0 ? [...prev, ...add] : prev;
+        });
+      }
+      if (meta) {
+        setRun(meta.run);
+        setSpans(meta.spans);
+        setFileChanges(meta.fileChanges);
+      }
+    };
     const close = openStream(
       selectedId,
       cursor,
       (msg) => {
-        setEvents((prev) => {
-          if (msg.events.length === 0) return prev;
-          const lastSeq = prev.length > 0 ? prev[prev.length - 1].seq : -1;
-          const fresh = msg.events.filter((e) => e.seq > lastSeq);
-          return fresh.length > 0 ? [...prev, ...fresh] : prev;
-        });
-        setRun(msg.run);
-        setSpans(msg.spans);
-        setFileChanges(msg.fileChanges);
+        pending = [...pending, ...msg.events];
+        latest = { run: msg.run, spans: msg.spans, fileChanges: msg.fileChanges };
+        if (!timer) timer = setTimeout(flush, 300);
       },
       () => {
+        if (timer) clearTimeout(timer);
         void loadRun(selectedId);
       },
     );
-    return close;
+    return () => {
+      close();
+      if (timer) clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, run?.live]);
 
@@ -308,6 +331,7 @@ export function App(): JSX.Element {
               selectedEventId={selectedEventId}
               onSelect={onSelectEvent}
               autoScrollSeq={autoScrollSeq}
+              live={run.live}
             />
           </>
         )}

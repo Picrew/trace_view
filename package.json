@@ -1,6 +1,6 @@
 {
   "name": "trace-review",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Local-first Agent Trace Review — inspect, search and review coding agent traces (Claude Code, Codex, generic JSONL). All data stays local.",
   "type": "module",
   "license": "MIT",
