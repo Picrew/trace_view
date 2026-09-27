@@ -2,7 +2,12 @@
 # Package Trace Review as a self-contained macOS .app and .dmg.
 #
 # Pipeline: tsc+vite build → esbuild single CJS bundle → Node SEA
-# (single-executable, no Node required at runtime) → Trace Review.app → DMG.
+# (single-executable, no Node required at runtime) → swiftc native window
+# shell → Trace Review.app (shell + server sidecar) → DMG.
+#
+# The .app opens a native AppKit window (WKWebView) that runs the bundled
+# server as a child process; the server still binds 127.0.0.1:7860, so any
+# browser can open the same UI while the app runs.
 #
 # Usage: bash scripts/package-macos.sh
 set -euo pipefail
@@ -10,6 +15,14 @@ cd "$(dirname "$0")/.."
 
 VERSION=$(node -p "require('./package.json').version")
 ARCH=$(uname -m)
+
+# Fail fast if the version constant drifted from package.json (the health
+# endpoint reports it, so a mismatch ships a wrongly-versioned binary).
+SRC_VERSION=$(node -p "require('fs').readFileSync('src/version.ts','utf8').match(/'([^']+)'/)[1]")
+if [ "$SRC_VERSION" != "$VERSION" ]; then
+  echo "✗ version mismatch: package.json=$VERSION but src/version.ts=$SRC_VERSION — bump both" >&2
+  exit 1
+fi
 OUT_DIR="dist-packages"
 APP_NAME="Trace Review"
 DMG="$OUT_DIR/Trace-Review-$VERSION-$ARCH.dmg"
@@ -21,11 +34,11 @@ rm -rf build/sea build/bundle build/app build/dmg-root "$OUT_DIR"
 mkdir -p build/sea build/bundle build/app "build/dmg-root" "$OUT_DIR"
 
 # ── 1. Build server + web bundle ──────────────────────────────────────────
-echo "▶ [1/6] npm run build"
+echo "▶ [1/7] npm run build"
 npm run build >/dev/null
 
 # ── 2. Single-file CJS bundle ─────────────────────────────────────────────
-echo "▶ [2/6] esbuild bundle"
+echo "▶ [2/7] esbuild bundle"
 npx esbuild src/cli.ts \
   --bundle --platform=node --format=cjs --target=node20 \
   --outfile=build/bundle/trace-review.cjs
@@ -33,7 +46,7 @@ npx esbuild src/cli.ts \
 # ── 3. Node SEA (single executable application) ───────────────────────────
 # Base binary: the official nodejs.org build (Homebrew builds are known to
 # behave inconsistently with postject injection). Cached under build/node-dist.
-echo "▶ [3/6] Node SEA binary"
+echo "▶ [3/7] Node SEA binary"
 NODE_VER=$(node -p "process.version.slice(1)")
 NODE_DIST_TGZ="build/node-dist/node-v$NODE_VER-darwin-arm64.tar.gz"
 if [ ! -f "$NODE_DIST_TGZ" ]; then
@@ -67,7 +80,7 @@ npx -y postject build/sea/trace-review NODE_SEA_BLOB build/sea/sea-prep.blob \
 codesign --sign - --force build/sea/trace-review
 
 # ── 4. App icon (best-effort; ships without icon on failure) ──────────────
-echo "▶ [4/6] app icon"
+echo "▶ [4/7] app icon"
 ICONSET="build/icon.iconset"
 mkdir -p "$ICONSET"
 cat > build/icon.svg <<'EOF'
@@ -113,13 +126,23 @@ else
   ICON_OK=0
 fi
 
-# ── 5. Assemble Trace Review.app ──────────────────────────────────────────
-echo "▶ [5/6] assembling $APP_NAME.app"
+# ── 5. Native window shell (AppKit + WKWebView) ──────────────────────────
+echo "▶ [5/7] compiling native shell (swiftc)"
+mkdir -p build/app-shell
+swiftc -O -o build/app-shell/TraceReview src/shell/main.swift
+
+# ── 6. Assemble Trace Review.app ──────────────────────────────────────────
+echo "▶ [6/7] assembling $APP_NAME.app"
 APP="build/app/$APP_NAME.app"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/app"
-cp build/sea/trace-review "$APP/Contents/MacOS/trace-review"
-chmod +x "$APP/Contents/MacOS/trace-review"
-cp -R dist/web "$APP/Contents/Resources/app/web"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+# Native shell is the bundle executable; the server is a Resources sidecar.
+# The server finds its web assets via the candidate list in
+# src/server/index.ts (`__dirname/web` → Contents/Resources/web).
+cp build/app-shell/TraceReview "$APP/Contents/MacOS/TraceReview"
+chmod +x "$APP/Contents/MacOS/TraceReview"
+cp build/sea/trace-review "$APP/Contents/Resources/trace-review"
+chmod +x "$APP/Contents/Resources/trace-review"
+cp -R dist/web "$APP/Contents/Resources/web"
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -130,14 +153,18 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>CFBundleIdentifier</key><string>com.picrew.trace-review</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleExecutable</key><string>trace-review</string>
+  <key>CFBundleExecutable</key><string>TraceReview</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
-  <!-- Background agent: no Dock icon (a windowless foreground app would
-       bounce in the Dock forever). Quit via the button in the web UI. -->
-  <key>LSUIElement</key><true/>
+  <!-- Regular foreground app: native window shell around the local server.
+       The server stays reachable from any browser at 127.0.0.1 while the
+       app runs (File → Open in Browser). -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key><true/>
+  </dict>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 $( [ "$ICON_OK" = "1" ] && { cp build/app-icon.icns "$APP/Contents/Resources/icon.icns"; echo '  <key>CFBundleIconFile</key><string>icon.icns</string>'; } )
 </dict>
@@ -145,8 +172,8 @@ $( [ "$ICON_OK" = "1" ] && { cp build/app-icon.icns "$APP/Contents/Resources/ico
 EOF
 codesign --sign - --force --deep "$APP"
 
-# ── 6. DMG ────────────────────────────────────────────────────────────────
-echo "▶ [6/6] creating DMG"
+# ── 7. DMG ────────────────────────────────────────────────────────────────
+echo "▶ [7/7] creating DMG"
 cp -R "$APP" "build/dmg-root/"
 ln -s /Applications "build/dmg-root/Applications"
 hdiutil create -volname "Trace Review" -srcfolder build/dmg-root -ov -format UDZO "$DMG" >/dev/null

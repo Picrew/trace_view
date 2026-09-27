@@ -10,6 +10,7 @@
 
 | | |
 |---|---|
+| **Native App** | macOS 原生应用窗口(AppKit + WKWebView):双击即用,有 Dock 图标和菜单栏;同一 server 期间任意浏览器访问 `127.0.0.1:7860` 亦可,两边共存 |
 | **Providers** | Claude Code(`~/.claude/projects`)、Codex CLI(`~/.codex/sessions`,支持 v0/v1/0.148 三代格式)、通用 `.jsonl`/`.ndjson` 手动导入 |
 | **Session Library** | 自动扫描本地会话,provider 过滤、搜索、按日期分组、live 会话标记 |
 | **Trajectory** | 虚拟滚动的完整轨迹:user/assistant/reasoning/tool call+result/system/error/compaction/unknown,连续工具调用自动聚合,可展开 |
@@ -27,13 +28,15 @@
 
 ## 快速开始
 
-**macOS(Apple Silicon)**:从 [Releases](https://github.com/Picrew/trace_view/releases) 下载 `Trace-Review-<ver>-arm64.dmg`,拖入 Applications 即可 — 自包含 Node 运行时,无需安装任何依赖。首次打开若被 Gatekeeper 拦截(未签名),右键 → 打开,或:
+**macOS(Apple Silicon)**:从 [Releases](https://github.com/Picrew/trace_view/releases) 下载 `Trace-Review-<ver>-arm64.dmg`,拖入 Applications 即可。双击打开的是**原生应用窗口**(无需浏览器),自包含 Node 运行时,不装任何依赖。应用运行期间想切回浏览器:`File → Open in Browser`(⌘B),或直接访问 `http://127.0.0.1:7860` — 两边连的是同一个本地 server。
+
+首次打开若被 Gatekeeper 拦截(未签名),右键 → 打开,或:
 
 ```bash
 xattr -d com.apple.quarantine "/Applications/Trace Review.app"
 ```
 
-**从源码运行**:
+**从源码运行**(网页模式):
 
 ```bash
 npm install
@@ -70,7 +73,7 @@ npm test           # 33 个测试(parsers / run-builder / API / UI 渲染 / live
 npm run typecheck  # server + web 双 tsconfig
 npx tsx scripts/e2e-check.ts  # 真实浏览器 e2e(需 Chrome)
 node scripts/bench-parse.ts    # 用本机最大的真实 trace 跑解析基准
-npm run package:mac            # 打包 .app + .dmg(Node SEA 单文件,无需用户装 Node)
+npm run package:mac            # 打包 .app + .dmg(Swift 壳 + Node SEA 单文件,无需用户装 Node)
 ```
 
 ## 架构
@@ -103,6 +106,7 @@ npm run package:mac            # 打包 .app + .dmg(Node SEA 单文件,无需用
 src/core/           统一 schema + adapters + run-builder(纯函数,可单测)
 src/server/         http server / 扫描器 / RunCache / SSE watcher
 src/cli.ts          CLI 入口
+src/shell/          macOS 原生窗口壳(AppKit + WKWebView,swiftc 编译)
 web/                React + Vite 前端
 tests/              fixtures + 单测 + jsdom UI 渲染测试 + live tail 测试
 docs/               格式研究文档、截图
@@ -112,7 +116,8 @@ scripts/            dev / bench 脚本
 
 ## 设计决策记录
 
-- **Web 优先,暂不打包 Tauri**:MVP 用 `127.0.0.1` 本地 server + 浏览器(需求文档允许的 fallback)。前端与 API 完全解耦(`fetch /api/*`),后续加 Tauri 壳只需把 `createTraceReviewServer()` 挂进 Tauri sidecar 或直接用其静态产物,无需改动 core。Rust 工具链已具备。
+- **macOS 用 Swift 原生壳,而非 Tauri**:`src/shell/main.swift`(AppKit + WKWebView,~120KB,swiftc 直接编译)包住现有 SEA 单文件 server,`/api` 契约零改动。Tauri 需要 Rust 工具链和一整条新构建链,且本项目打包仅面向 macOS —— 若未来要跨平台,Tauri 仍是候选路线。前端与 API 完全解耦(`fetch /api/*`),网页模式照常可用。
+- **Web 优先**(MVP 阶段):`127.0.0.1` 本地 server + 浏览器起家,原生壳是 v0.0.7 加上的,两者共用同一 server、可同时开。
 - **元数据缓存用 JSON 而非 SQLite**:`node:sqlite` 在当前 Node 上仍是实验性 API;缓存接口(`Library`)已隔离,替换为 SQLite 时不动业务代码。
 - **Codex `event_msg` 以 `response_item` 为权威**:item_completed/token_count 等流式事件与 response_item 重复,仅提取 FileChange 与 token 用量,其余计入 warnings 不丢弃。
 
@@ -123,4 +128,4 @@ scripts/            dev / bench 脚本
 - [ ] Trace Compare(同一任务多 run 对比:duration / tokens / tools / diff)
 - [ ] 自动异常检测(repeated command / file-read 循环 / token 激增)
 - [ ] Subagent 树视图(跨文件 lineage 拼接)
-- [ ] Tauri macOS 打包
+- [x] macOS 原生窗口壳(v0.0.7,Swift/AppKit 实现,取代原 Tauri 计划)
