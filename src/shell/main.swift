@@ -331,10 +331,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let config = WKWebViewConfiguration()
         let ucc = WKUserContentController()
-        // In the app, quitting lives in the application menu — hide the web
-        // UI's power button (browser tabs keep it).
+        // Mark the page as running inside the native shell (shows the
+        // "↗ Browser" entry) and hide the web UI's power button — quitting
+        // lives in the application menu. Browser tabs get neither.
+        // NOTE: WKUserScript source is JavaScript; a bare CSS string is a
+        // syntax error and silently does nothing (v0.0.7/0.0.8 bug).
         ucc.addUserScript(WKUserScript(
-            source: ".quit-btn{display:none!important}",
+            source: """
+            (function () {
+              window.__TRACE_REVIEW_APP__ = true;
+              var s = document.createElement('style');
+              s.textContent = '.quit-btn{display:none!important}';
+              (document.head || document.documentElement).appendChild(s);
+            })();
+            """,
             injectionTime: .atDocumentStart, forMainFrameOnly: true))
         ucc.addUserScript(WKUserScript(
             source: clipboardFallbackJS,

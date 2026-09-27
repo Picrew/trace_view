@@ -14,6 +14,9 @@ export function App(): JSX.Element {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Set by the native macOS shell (injected user script) — enables the
+  // "open this view in the browser" entry that the shell provides.
+  const [shellMode] = useState(() => (window as any).__TRACE_REVIEW_APP__ === true);
   const [run, setRun] = useState<TraceRun | null>(null);
   const [spans, setSpans] = useState<TimelineSpan[]>([]);
   const [fileChanges, setFileChanges] = useState<FileChangeSummary[]>([]);
@@ -360,6 +363,17 @@ export function App(): JSX.Element {
         )}
         <span className="status-right">
           local only · no telemetry
+          {shellMode && (
+            <button
+              className="browser-btn"
+              title="Open the current view in your default browser"
+              onClick={() => {
+                void api.openInBrowser(window.location.href).catch(() => undefined);
+              }}
+            >
+              ↗ Browser
+            </button>
+          )}
           <button
             className="quit-btn"
             title="Stop the local trace-review server"

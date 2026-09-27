@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { exec } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -75,9 +76,11 @@ export function createTraceReviewServer(opts: ServerOptions = {}): Promise<Trace
 
   const library = new Library(dirs);
   const cache = new RunCache(6);
+  // Actual bound port — only known after listen(); read by /api/open.
+  const portRef = { value: 0 };
 
   const server = http.createServer((req, res) => {
-    handleRequest(req, res, { library, cache }).catch((err) => {
+    handleRequest(req, res, { library, cache, portRef }).catch((err) => {
       if (!res.headersSent) {
         sendError(res, 500, (err as Error).message || 'Internal error');
       } else {
@@ -105,6 +108,7 @@ export function createTraceReviewServer(opts: ServerOptions = {}): Promise<Trace
         server.removeListener('error', onError);
         const addr = server.address();
         const actualPort = typeof addr === 'object' && addr ? addr.port : port;
+        portRef.value = actualPort;
         // Initial scan runs in the background; /api/library waits for it.
         void library.loadCache().then(() => library.scan());
         resolve({
@@ -125,6 +129,7 @@ export function createTraceReviewServer(opts: ServerOptions = {}): Promise<Trace
 interface Ctx {
   library: Library;
   cache: RunCache;
+  portRef: { value: number };
 }
 
 async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse, ctx: Ctx): Promise<void> {
@@ -158,10 +163,32 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
   }
 
   if (pathname === '/api/quit' && method === 'POST') {
-    // Local-only tool: the web UI's power button calls this to stop the
-    // server (the app is a background agent without a Dock icon).
+    // Local-only tool: the web UI's power button (browser tabs; the native
+    // app hides it and quits via the menu) calls this to stop the server.
     sendJson(res, 200, { ok: true, bye: true });
     setTimeout(() => process.exit(0), 150);
+    return;
+  }
+
+  if (pathname === '/api/open' && method === 'POST') {
+    // Open one of THIS server's URLs in the default browser. Used by the
+    // native app shell's "Open in Browser" button. Strictly validated —
+    // `open` with an arbitrary string would be a remote-launch vector.
+    const body = JSON.parse(await readBody(req)) as { url?: string };
+    let target: URL;
+    try {
+      target = new URL(String(body.url ?? ''));
+    } catch {
+      return sendError(res, 400, 'Invalid url');
+    }
+    const isOwnHost = target.hostname === '127.0.0.1' || target.hostname === 'localhost';
+    if (target.protocol !== 'http:' || !isOwnHost || target.port !== String(ctx.portRef.value)) {
+      return sendError(res, 400, 'Refused: only this server\'s own URL can be opened');
+    }
+    sendJson(res, 200, { ok: true });
+    exec(`open "${target.href.replace(/"/g, '')}"`, () => {
+      /* best-effort */
+    });
     return;
   }
 

@@ -62,6 +62,12 @@ export const api = {
       body: JSON.stringify({ path }),
     }),
   quit: () => json<{ ok: boolean }>('/api/quit', { method: 'POST' }),
+  openInBrowser: (url: string) =>
+    json<{ ok: boolean }>('/api/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    }),
 };
 
 export function openStream(

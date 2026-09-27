@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react';
 import type { SessionSummary } from '../types.js';
 import { PROVIDER_LABEL, dateGroup, fmtBytes, fmtDuration, fmtTokens, relativeTime } from '../format.js';
 
-const PROVIDER_ORDER: Array<SessionSummary['provider']> = ['claude-code', 'codex', 'generic'];
+const PROVIDER_ORDER: string[] = ['claude-code', 'codex', 'opencode', 'pi', 'generic'];
+const PROVIDER_ABBR: Record<string, string> = {
+  'claude-code': 'CC',
+  codex: 'CX',
+  opencode: 'OC',
+  pi: 'PI',
+  generic: 'GX',
+};
 
 export function SessionLibrary({
   sessions,
@@ -43,6 +50,15 @@ export function SessionLibrary({
     for (const s of sessions) c[s.provider] = (c[s.provider] ?? 0) + 1;
     return c;
   }, [sessions]);
+
+  // Chip order: known providers first, then any unexpected ones (never hidden).
+  const chipProviders = useMemo(() => {
+    const present = Object.keys(counts);
+    return [
+      ...PROVIDER_ORDER.filter((p) => counts[p]),
+      ...present.filter((p) => !PROVIDER_ORDER.includes(p)).sort(),
+    ];
+  }, [counts]);
 
   const grouped = useMemo(() => {
     const groups: Array<{ label: string; items: SessionSummary[] }> = [];
@@ -104,7 +120,7 @@ export function SessionLibrary({
       </div>
 
       <div className="provider-chips">
-        {PROVIDER_ORDER.filter((p) => counts[p]).map((p) => (
+        {chipProviders.map((p) => (
           <button
             key={p}
             className={`provider-chip provider-${p} ${providerFilter.size === 0 || providerFilter.has(p) ? 'on' : 'off'}`}
@@ -137,7 +153,9 @@ function SessionItem({ s, active, onSelect }: { s: SessionSummary; active: boole
     <button className={`session-item ${active ? 'active' : ''}`} onClick={() => onSelect(s.id)}>
       <div className="session-title-line">
         {s.live && <span className="live-dot" title="Modified recently — possibly still running" />}
-        <span className={`provider-tag provider-${s.provider}`}>{s.provider === 'claude-code' ? 'CC' : s.provider === 'codex' ? 'CX' : 'GX'}</span>
+        <span className={`provider-tag provider-${s.provider}`}>
+          {PROVIDER_ABBR[s.provider] ?? s.provider.slice(0, 2).toUpperCase()}
+        </span>
         <span className="session-title">{s.title}</span>
       </div>
       <div className="session-meta">

@@ -244,6 +244,12 @@ input::placeholder {
 .provider-generic .provider-dot {
   background: var(--text-faint);
 }
+.provider-opencode .provider-dot {
+  background: var(--accent);
+}
+.provider-pi .provider-dot {
+  background: var(--purple);
+}
 .chip-count {
   color: var(--text-faint);
   font-size: 10px;
@@ -329,6 +335,14 @@ input::placeholder {
 .provider-generic {
   background: #8b98a522;
   color: var(--text-dim);
+}
+.provider-opencode {
+  background: #4c8dff22;
+  color: var(--accent);
+}
+.provider-pi {
+  background: #b695f822;
+  color: var(--purple);
 }
 .session-meta {
   display: flex;
@@ -1554,4 +1568,17 @@ input::placeholder {
 .quit-btn:hover {
   color: var(--red);
   border-color: var(--red);
+}
+/* Shown only inside the native app shell (window.__TRACE_REVIEW_APP__). */
+.browser-btn {
+  margin-left: 12px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 8px;
+}
+.browser-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
