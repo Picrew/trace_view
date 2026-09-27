@@ -1,0 +1,13 @@
+{
+  "id": "prt_a1_3",
+  "sessionID": "ses_test0001",
+  "messageID": "msg_a1",
+  "type": "tool",
+  "callID": "call_001",
+  "tool": "bash",
+  "state": {
+    "status": "completed",
+    "input": { "command": "npm test", "description": "run tests" },
+    "output": "2 passed, 0 failed"
+  }
+}

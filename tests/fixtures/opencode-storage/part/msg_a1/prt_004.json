@@ -1,0 +1,9 @@
+{
+  "id": "prt_a1_4",
+  "sessionID": "ses_test0001",
+  "messageID": "msg_a1",
+  "type": "step-finish",
+  "reason": "tool-calls",
+  "cost": 0,
+  "tokens": { "input": 100, "output": 50, "reasoning": 10, "cache": { "read": 20, "write": 5 } }
+}

@@ -93,6 +93,18 @@ export class RunWatcher {
       return; // file vanished; keep clients waiting
     }
 
+    // OpenCode: watched file is the session metadata; messages live in other
+    // files. Any rewrite (mtime bump) → full re-projection + client reset.
+    // There is no cheap byte increment across a multi-file session.
+    if (handle.adapter.id === 'opencode') {
+      if (st.mtimeMs !== handle.parsed.run.mtimeMs) {
+        await this.reparseAndReset();
+      } else {
+        this.touchStat(st);
+      }
+      return;
+    }
+
     // Truncated / rotated → full re-parse and reset clients.
     if (st.size < handle.byteOffset) {
       await this.reparseAndReset();

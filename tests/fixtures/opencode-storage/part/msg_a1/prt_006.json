@@ -1,0 +1,22 @@
+{
+  "id": "prt_a1_6",
+  "sessionID": "ses_test0001",
+  "messageID": "msg_a1",
+  "type": "tool",
+  "callID": "call_002",
+  "tool": "edit",
+  "state": {
+    "status": "completed",
+    "input": {
+      "filePath": "/Users/demo/fixture-app/src/app.ts",
+      "oldString": "old line",
+      "newString": "new line"
+    },
+    "output": "Edit applied successfully.",
+    "title": "Users/demo/fixture-app/src/app.ts",
+    "metadata": {
+      "diagnostics": {},
+      "diff": "Index: /Users/demo/fixture-app/src/app.ts\n===================================================================\n--- a/src/app.ts\n+++ b/src/app.ts\n@@ -1,3 +1,3 @@\n function main() {\n-  old line\n+  new line\n }"
+    }
+  }
+}

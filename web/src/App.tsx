@@ -270,7 +270,10 @@ export function App(): JSX.Element {
         Select a session from the library, or import a trace by path.
         <br />
         Claude Code sessions come from <span className="mono">~/.claude/projects</span>, Codex from{' '}
-        <span className="mono">~/.codex/sessions</span>.
+        <span className="mono">~/.codex/sessions</span>,
+        <br />
+        OpenCode from <span className="mono">~/.local/share/opencode/storage</span>, pi from{' '}
+        <span className="mono">~/.pi/agent/sessions</span>.
       </p>
       {sessions.length === 0 && !refreshing && (
         <p className="empty-hint">

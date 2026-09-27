@@ -31,6 +31,11 @@ export function RunHeader({
               ⎇ {run.gitBranch}
             </span>
           )}
+          {run.notes?.map((n) => (
+            <span key={n} className="run-note">
+              {n}
+            </span>
+          ))}
           {run.models.length > 0 && <span>{run.models.join(' · ')}</span>}
           <span>
             {fmtDateTime(run.startedAt)} → {runDateTimeEnd(run)}

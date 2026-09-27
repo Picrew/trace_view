@@ -1,0 +1,9 @@
+{
+  "id": "prt_a1_7",
+  "sessionID": "ses_test0001",
+  "messageID": "msg_a1",
+  "type": "step-finish",
+  "reason": "stop",
+  "cost": 0,
+  "tokens": { "input": 200, "output": 80, "reasoning": 0, "cache": { "read": 0, "write": 0 } }
+}

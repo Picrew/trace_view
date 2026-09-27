@@ -1,21 +1,21 @@
 import { createHash } from 'node:crypto';
-import type { ToolCategory, ToolResultKind } from './schema.js';
+import type { StructuredPatch, ToolCategory, ToolResultKind } from './schema.js';
 
 /** Classify a provider tool name into a UI track/filter category. */
 export function classifyTool(toolName: string): { category: ToolCategory; mcpServer?: string } {
   const n = toolName;
-  if (n === 'Bash' || n === 'shell' || n === 'exec' || n === 'terminal' || n === 'PowerShell') {
+  if (n === 'Bash' || n === 'bash' || n === 'shell' || n === 'exec' || n === 'terminal' || n === 'PowerShell') {
     return { category: 'bash' };
   }
-  if (n === 'Read' || n === 'view' || n === 'open' || n === 'cat') return { category: 'read' };
-  if (n === 'Edit' || n === 'edit_file' || n === 'apply_patch' || n === 'str_replace_editor') {
+  if (n === 'Read' || n === 'read' || n === 'view' || n === 'open' || n === 'cat') return { category: 'read' };
+  if (n === 'Edit' || n === 'edit' || n === 'edit_file' || n === 'apply_patch' || n === 'str_replace_editor') {
     return { category: 'edit' };
   }
-  if (n === 'Write' || n === 'write_file' || n === 'create_file') return { category: 'write' };
-  if (n === 'Grep' || n === 'search' || n === 'grep') return { category: 'grep' };
-  if (n === 'Glob' || n === 'list_files' || n === 'ls') return { category: 'glob' };
-  if (n === 'Task' || n === 'Agent' || n === 'spawn' || n === 'agent') return { category: 'task' };
-  if (n === 'WebSearch' || n === 'WebFetch' || n === 'web_search' || n === 'fetch') {
+  if (n === 'Write' || n === 'write' || n === 'write_file' || n === 'create_file') return { category: 'write' };
+  if (n === 'Grep' || n === 'grep' || n === 'search') return { category: 'grep' };
+  if (n === 'Glob' || n === 'glob' || n === 'list_files' || n === 'ls') return { category: 'glob' };
+  if (n === 'Task' || n === 'task' || n === 'Agent' || n === 'spawn' || n === 'agent') return { category: 'task' };
+  if (n === 'WebSearch' || n === 'websearch' || n === 'WebFetch' || n === 'webfetch' || n === 'web_search' || n === 'fetch') {
     return { category: 'web' };
   }
   if (n.startsWith('mcp__')) {
@@ -149,4 +149,61 @@ export function countPatchLines(hunks: { lines: string[] }[]): { additions: numb
     }
   }
   return { additions, deletions };
+}
+
+const HUNK_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+/**
+ * Parse a unified diff string (e.g. opencode's `state.metadata.diff`) into
+ * StructuredPatch[] — one per file. Accepts `Index:`/`===` separators and
+ * tolerates missing `---`/`+++` headers.
+ */
+export function parseUnifiedDiff(text: string): StructuredPatch[] {
+  const patches: StructuredPatch[] = [];
+  let cur: { oldFile?: string; newFile?: string; hunks: StructuredPatch['hunks'] } | null = null;
+  let hunk: StructuredPatch['hunks'][number] | null = null;
+
+  const flushHunk = () => {
+    if (cur && hunk) cur.hunks.push(hunk);
+    hunk = null;
+  };
+  const flushFile = () => {
+    flushHunk();
+    if (cur && cur.hunks.length > 0) patches.push(cur);
+    cur = null;
+  };
+
+  const rawLines = text.split('\n');
+  if (rawLines.length > 0 && rawLines[rawLines.length - 1] === '') rawLines.pop(); // trailing newline
+  for (const raw of rawLines) {
+    const line = raw.replace(/\r$/, '');
+    if (line.startsWith('--- ')) {
+      const oldFile = line.slice(4).split('\t')[0].trim();
+      flushFile();
+      cur = { oldFile: oldFile === '/dev/null' ? undefined : oldFile, hunks: [] };
+      continue;
+    }
+    if (line.startsWith('+++ ')) {
+      if (cur) cur.newFile = line.slice(4).split('\t')[0].trim();
+      continue;
+    }
+    const m = HUNK_RE.exec(line);
+    if (m) {
+      flushHunk();
+      if (!cur) cur = { hunks: [] };
+      hunk = {
+        oldStart: Number(m[1]),
+        oldLines: m[2] !== undefined ? Number(m[2]) : 1,
+        newStart: Number(m[3]),
+        newLines: m[4] !== undefined ? Number(m[4]) : 1,
+        lines: [],
+      };
+      continue;
+    }
+    if (hunk && (line.startsWith('+') || line.startsWith('-') || line.startsWith(' ') || line === '')) {
+      hunk.lines.push(line);
+    }
+  }
+  flushFile();
+  return patches;
 }

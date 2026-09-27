@@ -1,0 +1,10 @@
+{
+  "id": "msg_a1",
+  "sessionID": "ses_test0001",
+  "role": "assistant",
+  "time": { "created": 1769407556088, "completed": 1769407564088 },
+  "modelID": "claude-opus-4.5",
+  "providerID": "github-copilot",
+  "agent": "build",
+  "cost": 0
+}

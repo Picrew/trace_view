@@ -11,6 +11,8 @@ interface CliArgs {
   noOpen: boolean;
   claudeDir?: string;
   codexDir?: string;
+  opencodeDir?: string;
+  piDir?: string;
   extraDirs: string[];
 }
 
@@ -32,6 +34,12 @@ function parseArgs(argv: string[]): CliArgs {
       case '--codex-dir':
         args.codexDir = argv[++i];
         break;
+      case '--opencode-dir':
+        args.opencodeDir = argv[++i];
+        break;
+      case '--pi-dir':
+        args.piDir = argv[++i];
+        break;
       case '--dir':
         args.extraDirs.push(argv[++i]);
         break;
@@ -47,6 +55,8 @@ Options:
   --no-open             Do not open the browser
   --claude-dir <path>   Claude Code projects dir (default: ~/.claude/projects)
   --codex-dir <path>    Codex sessions dir (default: ~/.codex/sessions)
+  --opencode-dir <path> OpenCode storage dir (default: ~/.local/share/opencode/storage)
+  --pi-dir <path>       pi sessions dir (default: ~/.pi/agent/sessions)
   --dir <path>          Extra directory to scan for traces (repeatable)
   -h, --help            Show this help
 
@@ -96,12 +106,16 @@ async function main(): Promise<void> {
     port: args.port,
     claudeDir: args.claudeDir,
     codexDir: args.codexDir,
+    opencodeDir: args.opencodeDir,
+    piDir: args.piDir,
     extraDirs: args.extraDirs,
   });
   const url = `http://127.0.0.1:${server.port}`;
   console.log(`trace-review serving on ${url}`);
-  console.log(`  claude dir: ${server.library.getDirs().claudeDir}`);
-  console.log(`  codex dir:  ${server.library.getDirs().codexDir}`);
+  console.log(`  claude dir:   ${server.library.getDirs().claudeDir}`);
+  console.log(`  codex dir:    ${server.library.getDirs().codexDir}`);
+  console.log(`  opencode dir: ${server.library.getDirs().opencodeDir}`);
+  console.log(`  pi dir:       ${server.library.getDirs().piDir}`);
   if (server.library.getDirs().extraDirs.length > 0) {
     console.log(`  extra dirs: ${server.library.getDirs().extraDirs.join(', ')}`);
   }

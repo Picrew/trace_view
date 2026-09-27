@@ -1,0 +1,8 @@
+{
+  "id": "prt_a1_8",
+  "sessionID": "ses_test0001",
+  "messageID": "msg_a1",
+  "type": "patch",
+  "hash": "fed9e8bc387fad711fe4839555ed936c75776191",
+  "files": ["/Users/demo/fixture-app/src/app.ts"]
+}

@@ -2,7 +2,14 @@ import type { FileChangeSummary, SessionSummary, TimelineSpan, TraceEvent, Trace
 
 export interface LibraryResponse {
   sessions: SessionSummary[];
-  dirs: { claudeDir: string; codexDir: string; archivedCodexDir: string; extraDirs: string[] };
+  dirs: {
+    claudeDir: string;
+    codexDir: string;
+    archivedCodexDir: string;
+    opencodeDir: string;
+    piDir: string;
+    extraDirs: string[];
+  };
   lastScan: number;
 }
 

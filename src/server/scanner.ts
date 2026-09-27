@@ -14,6 +14,8 @@ export interface LibraryDirs {
   claudeDir: string;
   codexDir: string;
   archivedCodexDir: string;
+  opencodeDir: string;
+  piDir: string;
   extraDirs: string[];
 }
 
@@ -23,6 +25,8 @@ export function defaultDirs(): LibraryDirs {
     claudeDir: path.join(home, '.claude', 'projects'),
     codexDir: path.join(home, '.codex', 'sessions'),
     archivedCodexDir: path.join(home, '.codex', 'archived_sessions'),
+    opencodeDir: path.join(home, '.local', 'share', 'opencode', 'storage'),
+    piDir: path.join(home, '.pi', 'agent', 'sessions'),
     extraDirs: [],
   };
 }
@@ -111,9 +115,12 @@ export class Library {
 
   private async doScan(force: boolean): Promise<void> {
     const files = new Set<string>();
+    const opencodeFiles = new Set<string>();
     await collectJsonl(this.dirs.claudeDir, files, 2);
     await collectJsonl(this.dirs.codexDir, files, 4);
     await collectJsonl(this.dirs.archivedCodexDir, files, 1);
+    await collectJsonl(this.dirs.piDir, files, 3);
+    await collectOpencodeSessions(this.dirs.opencodeDir, files, opencodeFiles);
     for (const dir of this.dirs.extraDirs) {
       await collectJsonl(dir, files, 4);
     }
@@ -144,7 +151,10 @@ export class Library {
           continue;
         }
         try {
-          const summary = await summarizeTraceFile(file);
+          const summary = await summarizeTraceFile(
+            file,
+            opencodeFiles.has(file) ? 'opencode' : undefined,
+          );
           if (summary) {
             this.cache.set(file, { size: st.size, mtimeMs: st.mtimeMs, summary });
             summaries.push(summary);
@@ -213,6 +223,41 @@ async function collectJsonl(dir: string, out: Set<string>, maxDepth: number, dep
       await collectJsonl(p, out, maxDepth, depth + 1);
     } else if (entry.name.endsWith('.jsonl') || entry.name.endsWith('.ndjson')) {
       out.add(p);
+    }
+  }
+}
+
+/**
+ * OpenCode stores sessions as `storage/session/<projectHash>/ses_<id>.json`
+ * (messages/parts live in sibling `message/` and `part/` trees, resolved by
+ * the projector). Collect the session metadata files.
+ */
+async function collectOpencodeSessions(
+  storageDir: string,
+  out: Set<string>,
+  opencodeFiles: Set<string>,
+): Promise<void> {
+  const sessionDir = path.join(storageDir, 'session');
+  let projects: import('node:fs').Dirent[];
+  try {
+    projects = await readdir(sessionDir, { withFileTypes: true });
+  } catch {
+    return; // missing dir is normal
+  }
+  for (const project of projects) {
+    if (!project.isDirectory()) continue;
+    let files: import('node:fs').Dirent[];
+    try {
+      files = await readdir(path.join(sessionDir, project.name), { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const f of files) {
+      if (f.isFile() && f.name.startsWith('ses_') && f.name.endsWith('.json')) {
+        const p = path.join(sessionDir, project.name, f.name);
+        out.add(p);
+        opencodeFiles.add(p);
+      }
     }
   }
 }

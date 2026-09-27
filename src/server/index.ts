@@ -48,6 +48,8 @@ export interface ServerOptions {
   host?: string;
   claudeDir?: string;
   codexDir?: string;
+  opencodeDir?: string;
+  piDir?: string;
   extraDirs?: string[];
 }
 
@@ -67,6 +69,8 @@ export function createTraceReviewServer(opts: ServerOptions = {}): Promise<Trace
     dirs.codexDir = opts.codexDir;
     dirs.archivedCodexDir = path.join(path.dirname(path.resolve(opts.codexDir)), 'archived_sessions');
   }
+  if (opts.opencodeDir) dirs.opencodeDir = opts.opencodeDir;
+  if (opts.piDir) dirs.piDir = opts.piDir;
   dirs.extraDirs = opts.extraDirs ?? [];
 
   const library = new Library(dirs);

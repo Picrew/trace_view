@@ -11,7 +11,7 @@
  *    a full re-parse.
  */
 
-export type TraceProvider = 'claude-code' | 'codex' | 'generic';
+export type TraceProvider = 'claude-code' | 'codex' | 'opencode' | 'pi' | 'generic';
 
 /** Bump when parser output semantics change in a way consumers must know about. */
 export const PARSER_VERSION = 1;
@@ -321,6 +321,8 @@ export interface TraceRun {
   parserVersion: number;
   /** Non-fatal parse problems (bad lines, unsupported features). */
   warnings: string[];
+  /** Context notes from the adapter (e.g. originator, subagent lineage). */
+  notes?: string[];
 }
 
 /** Lightweight listing record used by the Session Library. */

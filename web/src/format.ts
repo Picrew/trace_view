@@ -64,5 +64,7 @@ export function dateGroup(ms: number): string {
 export const PROVIDER_LABEL: Record<string, string> = {
   'claude-code': 'Claude Code',
   codex: 'Codex',
+  opencode: 'OpenCode',
+  pi: 'Pi',
   generic: 'Generic',
 };

@@ -402,6 +402,14 @@ input::placeholder {
   color: var(--accent);
   font-size: 11px;
 }
+.run-note {
+  font-family: var(--mono);
+  color: var(--dim, #8b93a7);
+  font-size: 11px;
+  padding: 1px 7px;
+  border: 1px solid rgba(139, 147, 167, 0.35);
+  border-radius: 8px;
+}
 .run-stats {
   display: flex;
   gap: 18px;

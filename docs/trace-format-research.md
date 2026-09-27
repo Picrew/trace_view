@@ -245,7 +245,40 @@ turn_context 中有 `collaboration_mode`、`multi_agent_version` 字段;子 agen
 
 手动导入的 `.jsonl`/`.ndjson`:逐行 parse,按启发式猜字段(`type`/`role`/`content`/`message`/`timestamp`),识别不了的整行进 UnknownEvent 但保留 raw。`.json`(单个对象或数组)同理。`.jsonl.zst` 暂不支持(MVP),UI 提示。
 
-## 6. 结论:关键技术决策
+## 6. OpenCode storage 格式(v0.0.8,实测 1.1.34 / 20 sessions / 493 messages / 1948 parts)
+
+**与 Claude/Codex 的本质区别:不是 JSONL,是三层 pretty-printed JSON 文件树**(`~/.local/share/opencode/storage/`):
+
+```
+session/<projectHash>/ses_<id>.json   会话元数据(title/directory/parentID/time.created|updated)
+message/ses_<id>/msg_<id>.json        每条消息一个文件(role/time.created|completed/modelID/agent)
+part/msg_<id>/prt_<id>.json           每个消息部件一个文件(消息体全在这层)
+```
+
+- **part type 实测分布**:step-start 434 / reasoning 277 / tool 465 / step-finish 431 / text 239 / patch 79 / file 22 / compaction 1。
+- **tool part**:`{callID, tool, state:{status: completed|error|running, input, output, title, metadata:{diagnostics, diff}}}` —— **call 和 result 在同一个 part 里**(不像 Claude 的 tool_use/tool_result 分离)。`output` 是字符串或数组;edit/write 的 `metadata.diff` 是 unified diff 字符串(解析成 structuredPatch → Files Changed)。
+- **step-start…step-finish = 一次 model request**;step-finish 带 `{reason, cost, tokens:{input, output, reasoning, cache:{read, write}}}`。
+- **user 消息的 part**:text / file(图片,data URL)/ compaction。
+- **patch part**:该 step 变更文件列表 `{hash, files:[...]}`,无线数 → 作为 0/0 的 file_change 补充信号。
+- **消息排序**:按 `time.created`(缺失回退 id);part 按文件名(=插入顺序)。**part 完全没有时间戳**(0/1948)→ adapter 在消息 `[created, completed]` 区间内线性插值,单工具时长无意义(run warnings 里注明)。
+- **子代理**:subagent 是独立 session(`parentID` 指向父会话)→ 在 Library 中作为独立 run 出现,notes 标注 lineage。
+- **投影器架构**(`src/core/opencode-projector.ts`):把三层存储聚合成确定性虚拟 JSONL(`{"type":"oc_session",…}` + `{"type":"oc_message", message, parts:[…]}`),event `loc` 指向虚拟流字节偏移;raw JSON 从缓存的投影文本切片(ParseHandle.virtualRaw)。live tail:watch session 元数据文件,mtime 变化 → 全量重投影 + reset(跨多文件无法增量)。
+
+## 7. pi JSONL 格式(v0.0.8,实测 v3 / 113 sessions / 6378 messages)
+
+`~/.pi/agent/sessions/--<cwd编码>--/<ISO时间>_<uuid>.jsonl`,事件带 `type` 与 `parentId` 链:
+
+- `{"type":"session","version":3,"id","timestamp","cwd"}` — 头行
+- `{"type":"model_change","provider","modelId"}` / `thinking_level_change` — 非事件,仅记录
+- `{"type":"message","id","parentId","timestamp","message":{…}}` — **role: user / assistant / toolResult**
+  - user content 块:text / image(有 `data` base64)
+  - assistant content 块:**text / thinking(字段是 `thinking` 不是 `text`!)/ toolCall({id, name, arguments})**;每条 assistant 消息 = 一次 model request,自带 `usage:{input, output, cacheRead, cacheWrite, totalTokens}`;`stopReason: stop|toolUse|error|length|aborted`,error 时有 `errorMessage`
+  - toolResult:`{toolCallId, toolName, content:[text…], isError}` — 与 toolCall 块按 id 配对,**时间戳真实** → 工具时长准确
+- `{"type":"compaction","summary"}` — 压缩摘要
+
+**Request boundary**:每条 assistant 消息一个(requestIndex 递增),usage 按 message 累加。live tail 与 Claude/Codex 相同(append-only NDJSON,通用增量路径直接可用)。
+
+## 8. 结论:关键技术决策
 
 - **权威数据源**:Claude 用 user/assistant/system 行;Codex 用 response_item + turn_context + token_count,忽略 event_msg 的重复流(仅取 FileChange/WebSearch 补充)。
 - **Request boundary**:Claude 推导(parent 链),Codex 直读(turn_id)。

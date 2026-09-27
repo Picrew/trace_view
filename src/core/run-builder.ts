@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
+import { Buffer } from 'node:buffer';
 import type {
   FileChangeSummary,
   ParsedRun,
@@ -16,6 +17,7 @@ import { defaultParseCtx, type ParseCtx, type ParserStateBase } from './adapter.
 import type { TraceAdapter } from './adapter.js';
 import { detectAdapter, getAdapter } from './adapters/index.js';
 import { readHeadLines, readJsonlLines, readSlice, readTailLines } from './reader.js';
+import { looksLikeOpencodeSession, projectOpencodeSession } from './opencode-projector.js';
 import { emptyStats, oneLine, parseTimestampMs, runIdFor } from './util.js';
 
 /** Full parse result plus state kept alive for live tailing. */
@@ -28,6 +30,8 @@ export interface ParseHandle {
   /** Byte offset just past the last parsed line. */
   byteOffset: number;
   parsedAtMs: number;
+  /** OpenCode only: the full virtual JSONL text; raw-JSON slices read from here. */
+  virtualRaw?: string;
 }
 
 const LIVE_WINDOW_MS = 5 * 60 * 1000;
@@ -39,33 +43,58 @@ export async function parseTraceFile(
   const st = opts.fileSizeBytes !== undefined && opts.mtimeMs !== undefined
     ? { size: opts.fileSizeBytes, mtimeMs: opts.mtimeMs }
     : await stat(filePath);
-  const head = await readHeadLines(filePath, 128 * 1024);
-  const adapter = opts.provider ? getAdapter(opts.provider) : detectAdapter(head);
+  const isOpencode =
+    opts.provider === 'opencode' || (opts.provider === undefined && looksLikeOpencodeSession(filePath));
+  const head = isOpencode ? [] : await readHeadLines(filePath, 128 * 1024);
+  const adapter = opts.provider ? getAdapter(opts.provider) : isOpencode ? getAdapter('opencode') : detectAdapter(head);
+  const projection = isOpencode ? await projectOpencodeSession(filePath) : null;
   const state = adapter.createState();
-  const ctx = defaultParseCtx(st.size / 3000);
+  const ctx = defaultParseCtx((projection?.totalBytes ?? st.size) / 3000);
   const events: TraceEvent[] = [];
 
   let byteOffset = 0;
-  for await (const line of readJsonlLines(filePath)) {
-    byteOffset = line.offset + line.length + 1;
-    let obj: unknown;
-    try {
-      obj = JSON.parse(line.text);
-    } catch {
-      state.meta.badLines += 1;
-      events.push({
-        id: `e${state.seq}`,
-        seq: state.seq++,
-        kind: 'unknown',
-        agentId: 'main',
-        timestampMs: undefined,
-        source: { provider: adapter.id, rawType: 'broken-line' },
-        loc: { offset: line.offset, length: line.length },
-        note: oneLine(line.text, 200),
-      });
-      continue;
+  let virtualRaw: string | undefined;
+  if (projection) {
+    if (projection.skippedMessages > 0) {
+      state.meta.warnings.push(`${projection.skippedMessages} message(s) could not be loaded`);
     }
-    events.push(...adapter.parseLine(obj, { offset: line.offset, length: line.length }, state, ctx));
+    for (const line of projection.lines) {
+      byteOffset = line.offset + line.length + 1;
+      let obj: unknown;
+      try {
+        obj = JSON.parse(line.text);
+      } catch {
+        state.meta.badLines += 1;
+        continue;
+      }
+      events.push(...adapter.parseLine(obj, { offset: line.offset, length: line.length }, state, ctx));
+    }
+    virtualRaw = projection.text;
+    // Watch bookkeeping (truncation detection, live flag) refers to the
+    // session metadata FILE, not the virtual stream.
+    byteOffset = st.size;
+  } else {
+    for await (const line of readJsonlLines(filePath)) {
+      byteOffset = line.offset + line.length + 1;
+      let obj: unknown;
+      try {
+        obj = JSON.parse(line.text);
+      } catch {
+        state.meta.badLines += 1;
+        events.push({
+          id: `e${state.seq}`,
+          seq: state.seq++,
+          kind: 'unknown',
+          agentId: 'main',
+          timestampMs: undefined,
+          source: { provider: adapter.id, rawType: 'broken-line' },
+          loc: { offset: line.offset, length: line.length },
+          note: oneLine(line.text, 200),
+        });
+        continue;
+      }
+      events.push(...adapter.parseLine(obj, { offset: line.offset, length: line.length }, state, ctx));
+    }
   }
   events.push(...adapter.finalize(state, ctx));
 
@@ -79,7 +108,7 @@ export async function parseTraceFile(
     state,
   });
 
-  return { parsed, adapter, state, ctx, filePath, byteOffset, parsedAtMs: Date.now() };
+  return { parsed, adapter, state, ctx, filePath, byteOffset, parsedAtMs: Date.now(), virtualRaw };
 }
 
 /** Recompute run metadata / stats / spans / file changes from the event list. */
@@ -290,6 +319,7 @@ export function buildDerived(input: {
     live: Date.now() - input.mtimeMs < LIVE_WINDOW_MS,
     parserVersion: PARSER_VERSION,
     warnings,
+    notes: meta.notes.length > 0 ? [...meta.notes] : undefined,
   };
 
   const fileChanges = [...fileChangeMap.values()].sort((a, b) => b.additions + b.deletions - (a.additions + a.deletions));
@@ -306,6 +336,9 @@ export async function summarizeTraceFile(
   filePath: string,
   provider?: TraceProvider,
 ): Promise<SessionSummary | null> {
+  if (provider === 'opencode' || (provider === undefined && looksLikeOpencodeSession(filePath))) {
+    return summarizeOpencodeSession(filePath);
+  }
   let st;
   try {
     st = await stat(filePath);
@@ -378,6 +411,60 @@ export async function summarizeTraceFile(
   };
 }
 
+/** OpenCode sessions are multi-file — summarize from a full projection. */
+async function summarizeOpencodeSession(filePath: string): Promise<SessionSummary | null> {
+  let st;
+  try {
+    st = await stat(filePath);
+  } catch {
+    return null;
+  }
+  if (!st.isFile()) return null;
+  let projection;
+  try {
+    projection = await projectOpencodeSession(filePath);
+  } catch {
+    return null;
+  }
+  const adapter = getAdapter('opencode');
+  const state = adapter.createState();
+  const ctx = defaultParseCtx(0);
+  let title: string | undefined;
+  for (let i = 0; i < projection.lines.length; i++) {
+    let obj: unknown;
+    try {
+      obj = JSON.parse(projection.lines[i]!.text);
+    } catch {
+      continue;
+    }
+    const produced = adapter.parseLine(obj, { offset: 0, length: 0 }, state, ctx);
+    if (!title) {
+      const user = produced.find((e) => e.kind === 'user_message') as
+        | { text?: string } | undefined;
+      if (user?.text?.trim()) title = oneLine(user.text, 120);
+    }
+    if (i > 400) break; // title/models live in the head
+  }
+  const meta = state.meta;
+  if (meta.startedAt === undefined && meta.endedAt === undefined && meta.models.size === 0) {
+    return null; // empty/unusable session
+  }
+  return {
+    id: runIdFor('opencode', filePath, meta.sessionId),
+    provider: 'opencode',
+    title: meta.title ?? title ?? path.basename(filePath),
+    project: meta.project ?? projectFromPath(filePath),
+    startedAt: meta.startedAt,
+    endedAt: meta.endedAt,
+    models: [...meta.models],
+    filePath,
+    fileName: path.basename(filePath),
+    fileSizeBytes: projection.totalBytes,
+    mtimeMs: st.mtimeMs,
+    live: Date.now() - st.mtimeMs < LIVE_WINDOW_MS,
+  };
+}
+
 function headTitleOf(o: Record<string, any>): string | undefined {
   // Claude Code human prompt.
   if (o.type === 'user' && typeof o.message?.content === 'string' && o.origin?.kind === 'human') {
@@ -392,6 +479,14 @@ function headTitleOf(o: Record<string, any>): string | undefined {
     const trimmed = text.trimStart();
     if (text && !trimmed.startsWith('<') && !trimmed.startsWith('# Files mentioned')) return oneLine(text, 120);
   }
+  // pi user message.
+  if (o.type === 'message' && o.message?.role === 'user' && Array.isArray(o.message.content)) {
+    const text = o.message.content
+      .map((b: any) => (b?.type === 'text' && typeof b.text === 'string' ? b.text : ''))
+      .join('\n')
+      .trim();
+    if (text) return oneLine(text, 120);
+  }
   return undefined;
 }
 
@@ -404,7 +499,14 @@ export function decodeClaudeDirName(dirName: string): string {
 /** Read raw JSON for one event's source line. */
 export async function readEventRaw(handle: ParseHandle, event: TraceEvent): Promise<unknown | null> {
   if (!event.loc) return null;
-  const raw = await readSlice(handle.filePath, event.loc.offset, event.loc.length);
+  let raw: string;
+  if (handle.virtualRaw !== undefined) {
+    // OpenCode: loc points into the projected virtual JSONL stream.
+    const buf = Buffer.from(handle.virtualRaw, 'utf8');
+    raw = buf.subarray(event.loc.offset, event.loc.offset + event.loc.length).toString('utf8');
+  } else {
+    raw = await readSlice(handle.filePath, event.loc.offset, event.loc.length);
+  }
   try {
     return JSON.parse(raw.trim());
   } catch {

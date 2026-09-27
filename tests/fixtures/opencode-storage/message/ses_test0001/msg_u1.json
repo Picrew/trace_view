@@ -1,0 +1,7 @@
+{
+  "id": "msg_u1",
+  "sessionID": "ses_test0001",
+  "role": "user",
+  "time": { "created": 1769407556086 },
+  "summary": { "title": "修 bug", "diffs": [] }
+}
