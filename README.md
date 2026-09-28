@@ -4,7 +4,7 @@
 
 不是聊天记录查看器,而是 **Agent Run Inspector**:准确呈现 Agent "实际上是怎么运行的",而不只是它"说了什么"。
 
-![screenshot](docs/screenshot-v0.2.png)
+![screenshot](docs/images/screenshot-v0.2.png)
 
 ## 特性
 
@@ -71,7 +71,7 @@ npm run dev        # vite(5173,代理 /api)+ tsx watch
 测试与检查:
 
 ```bash
-npm test           # 33 个测试(parsers / run-builder / API / UI 渲染 / live tail)
+npm test           # 44 个测试(parsers / run-builder / API / UI 渲染 / live tail)
 npm run typecheck  # server + web 双 tsconfig
 npx tsx scripts/e2e-check.ts  # 真实浏览器 e2e(需 Chrome)
 node scripts/bench-parse.ts    # 用本机最大的真实 trace 跑解析基准
@@ -81,11 +81,11 @@ npm run package:mac            # 打包 .app + .dmg(Swift 壳 + Node SEA 单文�
 ## 架构
 
 ```
-~/.claude/projects   ~/.codex/sessions        手动导入
-        └──────────────┬──────────────┘
-                       ▼
-        ClaudeAdapter / CodexAdapter / GenericAdapter     src/core/adapters/
-                       ▼
+~/.claude/projects  ~/.codex/sessions  opencode/storage  ~/.pi/agent  手动导入
+        └─────────────────┴────────┬────────┴──────────────┴──────────┘
+                                   ▼
+   Claude / Codex / OpenCode / pi / Generic Adapter       src/core/adapters/
+                                   ▼
              Unified Trace Schema (12 event kinds)        src/core/schema.ts
                        ▼
      ┌─────────────┬───────────────┬──────────────┐
@@ -100,7 +100,7 @@ npm run package:mac            # 打包 .app + .dmg(Swift 壳 + Node SEA 单文�
 - **统一 Schema**:所有 provider 归一化为 12 种 event kind;每个 event 记录源文件字节偏移(`loc`),原始 JSON 按需读取,normalization 永不丢数据,未识别行保留为 `unknown`。
 - **Adapter 契约**:`detect / createState / parseLine / finalize`,逐行解析 + 跨行状态(state),完整解析与 live tail 复用同一代码路径。
 - **性能**:字节级 offset 流式读取;437MB 真实 trace 1.2s 解析完;UI 虚拟滚动 + 自适应截断(超大 run 降低预览预算)。
-- **格式研究**:两代格式的逐字段结论见 `docs/trace-format-research.md`(基于本机真实样本,含 request boundary 推导、synthetic 识别规则、token 去重策略)。
+- **格式研究**:各 provider 格式的逐字段结论见 [`docs/trace-format-research.md`](docs/trace-format-research.md)(基于本机真实样本,含 request boundary 推导、synthetic 识别规则、token 去重策略)。
 
 ## 项目结构
 
@@ -112,7 +112,7 @@ src/cli.ts          CLI 入口
 src/shell/          macOS 原生窗口壳(AppKit + WKWebView,swiftc 编译)
 web/                React + Vite 前端
 tests/              fixtures + 单测 + jsdom UI 渲染测试 + live tail 测试
-docs/               格式研究文档、截图
+docs/               格式研究文档、发布说明、截图(见 docs/README.md)
 bin/                trace-review 启动器
 scripts/            dev / bench 脚本
 ```
@@ -123,6 +123,10 @@ scripts/            dev / bench 脚本
 - **Web 优先**(MVP 阶段):`127.0.0.1` 本地 server + 浏览器起家,原生壳是 v0.0.7 加上的,两者共用同一 server、可同时开。
 - **元数据缓存用 JSON 而非 SQLite**:`node:sqlite` 在当前 Node 上仍是实验性 API;缓存接口(`Library`)已隔离,替换为 SQLite 时不动业务代码。
 - **Codex `event_msg` 以 `response_item` 为权威**:item_completed/token_count 等流式事件与 response_item 重复,仅提取 FileChange 与 token 用量,其余计入 warnings 不丢弃。
+
+## 版本历史
+
+每个版本的变更见 [CHANGELOG.md](CHANGELOG.md),完整发布说明在 [`docs/releases/`](docs/releases/)。
 
 ## Roadmap(V2+)
 
