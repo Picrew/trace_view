@@ -4,6 +4,19 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.10] — 2026-10-08
+
+### Changed
+- **全新应用图标**(分层玻璃堆叠):Dock、启动台、Finder、DMG 与浏览器标签页统一。
+- 图标来源从 `package-macos.sh` 内联 SVG + 无头 Chrome 渲染,改为位图资产 `assets/icon-1024.png`(1024px 直通道透明 PNG,按 macOS 图标网格 824px 内容区排布);打包流程少一个外部依赖,`scripts/render-icon.ts` 删除。
+- iconset 目录每次打包前先清空,避免残留旧尺寸位图混进 `.icns`。
+
+### Added
+- `web/index.html` 的 favicon 与 `apple-touch-icon`(此前浏览器标签页是默认空白图标)。
+- `scripts/extract-icon.py`:从 `assets/icon-source.png` 复现抠图(已知背景抠图 —— 逐行背景建模 + B→F 投影求 alpha + 轮廓腐蚀定内部),可逐像素复现提交的图标。
+
+[详情 →](docs/releases/v0.0.10.md)
+
 ## [0.0.9] — 2026-09-28
 
 ### Fixed

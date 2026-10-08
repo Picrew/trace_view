@@ -80,49 +80,24 @@ npx -y postject build/sea/trace-review NODE_SEA_BLOB build/sea/sea-prep.blob \
 codesign --sign - --force build/sea/trace-review
 
 # ── 4. App icon (best-effort; ships without icon on failure) ──────────────
+# Source of truth is assets/icon-1024.png — a straight-alpha 1024px artwork on
+# the macOS icon grid (824px content box). Wiped and regenerated every run so a
+# stale iconset can never ship the previous icon.
 echo "▶ [4/7] app icon"
 ICONSET="build/icon.iconset"
+ICON_SRC="assets/icon-1024.png"
+rm -rf "$ICONSET"
 mkdir -p "$ICONSET"
-cat > build/icon.svg <<'EOF'
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#26304a"/>
-      <stop offset="1" stop-color="#0b0e16"/>
-    </linearGradient>
-    <linearGradient id="stroke" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#5b9dff"/>
-      <stop offset="1" stop-color="#2fd4de"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#8ff0e6" stop-opacity="0.85"/>
-      <stop offset="1" stop-color="#8ff0e6" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <!-- macOS icon grid: content area 824x824 centered (100px margins),
-       corner radius ~22.5% — matches system app icon proportions. -->
-  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
-  <rect x="109" y="109" width="806" height="806" rx="178" fill="none" stroke="#42506e" stroke-width="5" opacity="0.5"/>
-  <path d="M 258 716 C 508 716 470 308 758 308"
-        fill="none" stroke="url(#stroke)" stroke-width="62" stroke-linecap="round"/>
-  <circle cx="258" cy="716" r="30" fill="#0b0e16" stroke="#5b9dff" stroke-width="19"/>
-  <circle cx="742" cy="341" r="26" fill="#2fd4de"/>
-  <circle cx="758" cy="308" r="150" fill="url(#glow)" opacity="0.6"/>
-  <circle cx="758" cy="308" r="34" fill="#b5f5ec"/>
-</svg>
-EOF
-# Render via headless Chrome: qlmanage fills transparent areas with opaque
-# white, which appears as a white frame in the Dock.
-if npx tsx scripts/render-icon.ts >/dev/null 2>&1 && [ -f build/icon.svg.png ]; then
+if [ -f "$ICON_SRC" ]; then
   # Generate the full iconset with REAL @2x bitmaps (a 1x image copied into an
   # @2x slot renders blurry on Retina displays).
   for size in 16 32 128 256 512; do
-    sips -z $size $size build/icon.svg.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
-    sips -z $((size * 2)) $((size * 2)) build/icon.svg.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+    sips -z $size $size "$ICON_SRC" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z $((size * 2)) $((size * 2)) "$ICON_SRC" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
   done
   iconutil -c icns -o build/app-icon.icns "$ICONSET" && ICON_OK=1 || ICON_OK=0
 else
-  echo "  (qlmanage unavailable — shipping without custom icon)"
+  echo "  ($ICON_SRC missing — shipping without custom icon)"
   ICON_OK=0
 fi
 
