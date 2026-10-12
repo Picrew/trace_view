@@ -1,4 +1,8 @@
-/* ─── Session library (sidebar) ──────────────────────────────────────── */
+/* ─── Session library (sidebar) ──────────────────────────────────────────
+   Restrained, but not flat. Three zones with distinct treatments so they
+   never share one grey band: an inset search field, filled filter pills,
+   then plain rows. Inside a row each line sits on its own text step
+   (title → project → stats), with selection as the only coloured fill. */
 
 .library-header {
   display: flex;
@@ -18,7 +22,7 @@
   font-size: 13.5px;
   font-weight: 650;
   letter-spacing: -0.012em;
-  color: var(--text);
+  color: var(--text-strong);
 }
 .session-count {
   color: var(--faint);
@@ -44,67 +48,91 @@
   margin-top: 5px;
   padding-left: 2px;
 }
-
+/* Search: an inset well (darker than the sidebar) with a readable
+   placeholder — the primary entry point, so it reads as a field, not a row. */
 .library-search {
   position: relative;
-  padding: 0 12px 8px;
+  padding: 0 12px 10px;
 }
 .library-search input {
   width: 100%;
-  padding-left: 27px;
+  height: 28px;
+  padding-left: 29px;
+  font-size: 12.5px;
+  background: var(--field);
+  border-color: var(--field-border);
+}
+.library-search input::placeholder {
+  color: var(--subtle);
+}
+.library-search input:hover {
+  border-color: var(--border-strong);
+}
+.library-search input:focus {
+  border-color: rgba(123, 155, 224, 0.55);
 }
 .library-search .field-icon {
   position: absolute;
-  left: 21px;
-  top: 6px;
-  color: var(--faint);
+  left: 22px;
+  top: 7px;
+  color: var(--subtle);
   pointer-events: none;
 }
+.library-search:focus-within .field-icon {
+  color: var(--text-2);
+}
 
-/* Provider filter: quiet segmented pills, only highlighted while filtering. */
+/* Provider filter: filled pills, so they read as toggles rather than list
+   text. Filtering lifts the chosen pills and drops the rest. */
 .provider-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 0 10px 10px;
-  border-bottom: 1px solid var(--border-soft);
+  gap: 4px;
+  padding: 0 12px 12px;
+  border-bottom: 1px solid var(--border);
 }
 .provider-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 22px;
-  padding: 0 7px;
+  padding: 0 8px 0 7px;
   border-radius: var(--r-sm);
+  background: var(--hover-strong);
   font-size: var(--fs-xs);
-  color: var(--muted);
+  color: var(--text-2);
   transition: color 120ms ease, background-color 120ms ease, opacity 120ms ease;
 }
 .provider-chip:hover {
-  color: var(--text);
-  background: var(--hover-strong);
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.085);
 }
 .provider-chips.filtering .provider-chip.on {
-  color: var(--text);
+  color: var(--text-strong);
   background: var(--raised-2);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 .provider-chips.filtering .provider-chip.off {
-  opacity: 0.5;
+  background: transparent;
+  color: var(--faint);
+}
+.provider-chips.filtering .provider-chip.off .provider-dot {
+  opacity: 0.45;
 }
 .provider-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: var(--faint);
+  background: var(--provider-color, var(--faint));
 }
-.provider-claude-code .provider-dot { background: #c9886a; }
-.provider-codex .provider-dot { background: #8fb59a; }
-.provider-opencode .provider-dot { background: #8aa1cf; }
-.provider-pi .provider-dot { background: #a99bd0; }
-.provider-generic .provider-dot { background: var(--faint); }
+.provider-claude-code { --provider-color: var(--p-claude-code); }
+.provider-codex { --provider-color: var(--p-codex); }
+.provider-opencode { --provider-color: var(--p-opencode); }
+.provider-pi { --provider-color: var(--p-pi); }
+.provider-generic { --provider-color: var(--p-generic); }
 .chip-count {
-  color: var(--faint);
+  color: var(--subtle);
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -123,35 +151,51 @@
   text-align: center;
   font-size: var(--fs-sm);
 }
+/* Section dividers: small caps-style labels, clearly not a row. */
 .group-label {
   position: sticky;
   top: 0;
   z-index: 1;
   margin: 0 -8px;
-  padding: 12px 16px 5px;
+  padding: 14px 16px 6px;
   background: var(--surface);
-  color: var(--faint);
-  font-size: var(--fs-xs);
-  font-weight: 500;
+  color: var(--subtle);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .session-item {
+  position: relative;
   display: block;
   width: 100%;
   text-align: left;
-  padding: 7px 8px 7px 8px;
+  padding: 8px;
   margin: 1px 0;
   border-radius: var(--r-sm);
-  color: var(--text-2);
   transition: background-color 80ms ease;
 }
 .session-item:hover {
-  background: var(--hover-strong);
+  background: var(--hover);
 }
+/* Selected: tinted fill + accent edge (same language as the event stream),
+   and every line inside steps up one level of contrast. */
 .session-item.active {
-  background: rgba(123, 155, 224, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(123, 155, 224, 0.16);
+  background: var(--selected);
 }
+.session-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+}
+
+/* Line 1 — title: the scan anchor, brightest text in the row. */
 .session-title-line {
   display: flex;
   align-items: center;
@@ -161,15 +205,16 @@
 .session-title {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 18px;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .session-item.active .session-title {
-  color: var(--text);
-  font-weight: 500;
+  color: var(--text-strong);
 }
 .live-dot {
   /* Trailing, so live and idle titles share the same left edge. */
@@ -181,36 +226,70 @@
   flex-shrink: 0;
   animation: pulse 2s ease-in-out infinite;
 }
+
+/* Line 2 — project · branch: secondary, the branch one step quieter. */
 .session-meta {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
   min-width: 0;
-  font-size: var(--fs-xs);
-  line-height: 15px;
+  margin-top: 3px;
+  font-size: var(--fs-sm);
+  line-height: 16px;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.session-meta.dim {
-  color: var(--faint);
 }
 .session-project {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.session-branch {
+  color: var(--meta);
+}
+.session-item.active .session-meta {
+  color: var(--text-2);
+}
+.session-item.active .session-branch {
+  color: var(--muted);
+}
+
+/* Line 3 — stats: the weakest step. Values never wrap; only the model tag
+   gives way (ellipsis) when the row is narrow. */
+.session-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  line-height: 16px;
+  color: var(--meta);
+  font-variant-numeric: tabular-nums;
+}
+.session-stats > span {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .session-provider {
   font-family: var(--mono);
   font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.02em;
-  color: var(--faint);
-  flex-shrink: 0;
+  color: var(--provider-color, var(--faint));
 }
-.session-model {
-  margin-left: auto;
+/* Model: right-aligned and one step brighter than the stats, so the column
+   scans on its own without a box around every row. */
+.session-stats > .session-model {
+  flex-shrink: 1;
   min-width: 0;
-  white-space: nowrap;
+  margin-left: auto;
+  padding-left: 4px;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.session-item.active .session-stats {
+  color: var(--muted);
+}
+.session-item.active .session-model {
+  color: var(--text-2);
 }

@@ -4,6 +4,19 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.12] — 2026-10-12
+
+### Changed
+- **Sidebar 层级与对比度**：低饱和不变，加强层级、局部提高对比度。搜索框改为内嵌深色输入框；provider 筛选改为带底色的胶囊；分组标题改为小号大写分节标记。
+- 列表行每行文字用不同亮度档：标题 `--text`/500（14.9:1）、项目与模型名 `--muted`（7.1:1）、分支与统计用新增的 `--meta`（4.7:1，原 3.8:1 低于 AA）；provider 缩写使用身份色。
+- 选中态改为蓝色底加左侧 accent 竖条（和事件流一致），行内文字整体提亮一档；hover 底色减弱。
+- `tokens.css` 新增 `--text-strong` / `--subtle` / `--meta` / `--selected` / `--field` 和 provider 身份色 `--p-*`。
+
+### Fixed
+- 会话行元信息在宽度紧张时折行（`just now`、`5h 41m` 断成两行）；现在只省略模型名，悬停显示全部模型。
+
+[详情 →](docs/releases/v0.0.12.md)
+
 ## [0.0.11] — 2026-10-12
 
 ### Changed
@@ -110,6 +123,7 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 [详情 →](docs/releases/v0.0.1.md)
 
+[0.0.12]: https://github.com/Picrew/trace_view/releases/tag/v0.0.12
 [0.0.11]: https://github.com/Picrew/trace_view/releases/tag/v0.0.11
 [0.0.10]: https://github.com/Picrew/trace_view/releases/tag/v0.0.10
 [0.0.9]: https://github.com/Picrew/trace_view/releases/tag/v0.0.9

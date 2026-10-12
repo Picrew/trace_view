@@ -131,7 +131,7 @@ export function SessionLibrary({
       )}
 
       <div className="library-search">
-        <IconSearch size={13} className="field-icon" />
+        <IconSearch size={14} className="field-icon" />
         <input aria-label="Search sessions" placeholder="Search sessions…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </div>
 
@@ -175,11 +175,11 @@ function SessionItem({ s, active, onSelect }: { s: SessionSummary; active: boole
       <div className="session-meta">
         <span className="session-project" title={s.filePath}>
           {s.project}
-          {s.gitBranch ? ` · ${s.gitBranch}` : ''}
+          {s.gitBranch && <span className="session-branch">{` · ${s.gitBranch}`}</span>}
         </span>
       </div>
-      <div className="session-meta dim">
-        <span className="session-provider" title={PROVIDER_LABEL[s.provider] ?? s.provider}>
+      <div className="session-stats">
+        <span className={`session-provider provider-${s.provider}`} title={PROVIDER_LABEL[s.provider] ?? s.provider}>
           {PROVIDER_ABBR[s.provider] ?? s.provider.slice(0, 2).toUpperCase()}
         </span>
         <span>{relativeTime(s.mtimeMs)}</span>
@@ -187,7 +187,11 @@ function SessionItem({ s, active, onSelect }: { s: SessionSummary; active: boole
         <span>{fmtBytes(s.fileSizeBytes)}</span>
         {s.usage && s.usage.totalTokens > 0 && <span>{fmtTokens(s.usage.totalTokens)} tok</span>}
         {s.stats && s.stats.toolCalls > 0 && <span>{s.stats.toolCalls} tools</span>}
-        {s.models.length > 0 && <span className="session-model">{s.models[0]}</span>}
+        {s.models.length > 0 && (
+          <span className="session-model" title={s.models.join(', ')}>
+            {s.models[0]}
+          </span>
+        )}
       </div>
     </button>
   );

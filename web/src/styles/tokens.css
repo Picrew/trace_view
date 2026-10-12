@@ -18,12 +18,21 @@
   --border-soft: #1c1f25;   /* row dividers, hairlines */
   --border-strong: #343944; /* control outlines on hover/focus */
 
-  /* Text */
+  /* Text — one ramp, brightest first. Lists use non-adjacent steps per line
+     (strong/text → muted → faint) so hierarchy survives a fast scan. */
+  --text-strong: #f4f6fa;   /* selected titles, primary labels */
   --text: #e6e9ef;
   --text-2: #c9ced6;        /* body copy inside events */
   --muted: #9aa3b0;
+  --subtle: #848c99;        /* section labels, placeholders */
+  --meta: #7a828f;          /* dense list stats — weakest step still ≥ 4.5:1 */
   --faint: #6b7380;
   --ghost: #4a515c;
+
+  /* Selection: the one place a list row gets a coloured fill. */
+  --selected: rgba(123, 155, 224, 0.14);
+  --field: var(--canvas);   /* inset text fields on surfaces */
+  --field-border: #2c313a;
 
   /* Semantic hues (soft, desaturated) */
   --accent: #7b9be0;
@@ -39,6 +48,14 @@
   --edit-tint: rgba(127, 184, 138, 0.11);
   --error-tint: rgba(224, 122, 114, 0.12);
   --neutral-tint: rgba(255, 255, 255, 0.05);
+
+  /* Provider identity (dots + row abbreviations). Low-chroma so a column of
+     them reads as a quiet index, not decoration. */
+  --p-claude-code: #c9886a;
+  --p-codex: #8fb59a;
+  --p-opencode: #8aa1cf;
+  --p-pi: #a99bd0;
+  --p-generic: var(--faint);
 
   /* Type */
   --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', sans-serif;
