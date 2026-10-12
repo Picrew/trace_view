@@ -9,6 +9,7 @@ import { Trajectory } from './components/Trajectory.js';
 import { Inspector } from './components/Inspector.js';
 import { FilesPanel } from './components/FilesPanel.js';
 import { fmtBytes } from './format.js';
+import { IconClose, IconExternal, IconLock, IconPower, IconTraceMark } from './components/Icons.js';
 
 export function App(): JSX.Element {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -267,7 +268,9 @@ export function App(): JSX.Element {
 
   const emptyState = (
     <div className="empty-state">
-      <div className="empty-logo">⌗</div>
+      <div className="empty-logo">
+        <IconTraceMark />
+      </div>
       <h2>Agent Run Inspector</h2>
       <p>
         Select a session from the library, or import a trace by path.
@@ -301,7 +304,9 @@ export function App(): JSX.Element {
         {loadError && (
           <div className="error-banner">
             {loadError}
-            <button onClick={() => setLoadError(null)}>✕</button>
+            <button onClick={() => setLoadError(null)} title="Dismiss" aria-label="Dismiss error">
+              <IconClose size={13} />
+            </button>
           </div>
         )}
         {loading && (
@@ -358,11 +363,18 @@ export function App(): JSX.Element {
             <span className="mono">{fmtBytes(run.fileSizeBytes)}</span>
             <span>{run.stats.requests} requests</span>
             <span>{run.stats.events} events</span>
-            {run.live && <span className="live-badge">LIVE</span>}
+            {run.live && (
+              <span className="status-live">
+                <span className="live-badge">LIVE</span>
+              </span>
+            )}
           </>
         )}
         <span className="status-right">
-          local only · no telemetry
+          <span className="status-privacy" title="Traces are read locally; nothing leaves this machine">
+            <IconLock size={11} />
+            local only · no telemetry
+          </span>
           {shellMode && (
             <button
               className="browser-btn"
@@ -371,7 +383,8 @@ export function App(): JSX.Element {
                 void api.openInBrowser(window.location.href).catch(() => undefined);
               }}
             >
-              ↗ Browser
+              <IconExternal size={11} />
+              Browser
             </button>
           )}
           <button
@@ -381,7 +394,8 @@ export function App(): JSX.Element {
               void api.quit().catch(() => undefined);
             }}
           >
-            ⏻ Quit
+            <IconPower size={11} />
+            Quit
           </button>
         </span>
       </footer>

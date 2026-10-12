@@ -1,0 +1,87 @@
+/* ─── Empty / loading / error states ─────────────────────────────────── */
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  line-height: 1.7;
+}
+.empty-logo {
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+.empty-state h2 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+.empty-state .mono {
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--neutral-tint);
+  font-size: var(--fs-mono-sm);
+  color: var(--text-2);
+}
+.empty-hint {
+  max-width: 520px;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+
+.loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 4px;
+  border: 1.5px solid var(--border-strong);
+  border-top-color: var(--text-2);
+  border-radius: 50%;
+  animation: spin-center 0.8s linear infinite;
+}
+.loading-hint {
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 6px 8px 6px var(--stream-pad);
+  flex-shrink: 0;
+  background: rgba(224, 122, 114, 0.08);
+  border-bottom: 1px solid rgba(224, 122, 114, 0.22);
+  color: #eaa59f;
+  font-size: var(--fs-sm);
+}
+.error-banner button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-xs);
+  color: inherit;
+}
+.error-banner button:hover {
+  background: rgba(224, 122, 114, 0.12);
+}

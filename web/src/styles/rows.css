@@ -1,0 +1,141 @@
+/* ─── Event stream: container + row grid ─────────────────────────────── */
+
+.trajectory-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.trajectory {
+  flex: 1;
+  min-height: 0; /* flex item auto-min would otherwise force content height */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Browser scroll anchoring fights the virtualizer's absolute-positioned
+     rows and makes the viewport drift on content updates. */
+  overflow-anchor: none;
+  padding: 4px 0 60px;
+  background: var(--canvas);
+}
+.trajectory-empty {
+  padding: 72px 24px;
+  text-align: center;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+.follow-btn {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  background: var(--raised-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  box-shadow: var(--popover-shadow);
+}
+.follow-btn:hover {
+  background: #262a31;
+}
+
+/* Every row: [time gutter][body]. Hover is a whisper; selection adds a
+   2px accent edge plus a faint tint. */
+.row {
+  position: relative;
+  display: flex;
+  padding: 0 var(--stream-pad);
+  transition: background-color 60ms ease;
+}
+.row:hover {
+  background: var(--hover);
+}
+.row.selected {
+  background: rgba(123, 155, 224, 0.07);
+}
+.row.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+}
+.row-gutter {
+  width: var(--gutter);
+  flex-shrink: 0;
+}
+.time-gutter {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  line-height: 20px;
+  color: var(--ghost);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.row:hover .time-gutter,
+.row.selected .time-gutter {
+  color: var(--faint);
+}
+.row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Request boundary: section divider for each model call ──────────── */
+
+.boundary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  margin-top: 4px;
+  padding: 0 var(--stream-pad);
+  cursor: pointer;
+}
+.boundary-label {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+.boundary-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--model-tint);
+  color: var(--model);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.boundary-meta {
+  margin-left: 2px;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.boundary-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+.boundary-row:hover .boundary-meta {
+  color: var(--muted);
+}
+.boundary-row:hover .boundary-line {
+  background: var(--border);
+}

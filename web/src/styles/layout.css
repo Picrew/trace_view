@@ -1,0 +1,115 @@
+/* ─── Layout ─────────────────────────────────────────────────────────── */
+
+.app {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) auto;
+  /* minmax(0, …) is essential: a bare `1fr` track has an automatic minimum
+     that grows to content height (56k px of virtualized rows), which disables
+     scrolling for the whole middle column. */
+  grid-template-rows: minmax(0, 1fr) 26px;
+  grid-template-areas:
+    'sidebar main right'
+    'status status status';
+  height: 100vh;
+}
+
+.library {
+  grid-area: sidebar;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--canvas);
+}
+
+.right-panel {
+  grid-area: right;
+  width: 420px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Status bar ─────────────────────────────────────────────────────── */
+
+.statusbar {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 8px 0 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+.statusbar > span:not(.status-right) {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+/* Hairline separators between status items. */
+.statusbar > span:not(.status-right) + span:not(.status-right)::before {
+  content: '';
+  width: 1px;
+  height: 11px;
+  margin: 0 10px;
+  background: var(--border-strong);
+}
+.statusbar .mono {
+  font-size: var(--fs-mono-sm);
+}
+.statusbar .live-badge {
+  height: 16px;
+  font-size: 9.5px;
+}
+.status-right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 16px;
+  color: var(--faint);
+}
+.status-privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 8px;
+}
+.quit-btn,
+.browser-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--r-xs);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  transition: color 120ms ease, background-color 120ms ease;
+}
+.browser-btn:hover {
+  color: var(--text);
+  background: var(--hover-strong);
+}
+.quit-btn:hover {
+  color: var(--error);
+  background: var(--error-tint);
+}

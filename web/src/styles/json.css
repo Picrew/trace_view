@@ -1,0 +1,74 @@
+/* ─── JSON view ──────────────────────────────────────────────────────── */
+/* Mostly neutral: keys carry structure, values stay calm. */
+
+.jv {
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.jv-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+.jv-toggle {
+  width: 12px;
+  flex-shrink: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--ghost);
+}
+.jv-toggle:hover {
+  color: var(--text);
+}
+.jv-toggle-sp {
+  display: inline-block;
+  width: 12px;
+  flex-shrink: 0;
+}
+.jv-key { color: #93a9d6; }
+.jv-str {
+  color: #c9cfd8;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.jv-num { color: #d4b07a; }
+.jv-bool { color: #d4b07a; }
+.jv-null { color: var(--faint); }
+.jv-punc { color: var(--faint); }
+.jv-summary {
+  color: var(--faint);
+  cursor: pointer;
+}
+.jv-summary:hover { color: var(--text-2); }
+.jv-truncated {
+  padding-left: 16px;
+  color: var(--faint);
+}
+.jv-more {
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--faint);
+}
+.jv-more:hover { color: var(--accent); }
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.copy-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}

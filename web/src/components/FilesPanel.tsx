@@ -23,9 +23,9 @@ export function FilesPanel({
   return (
     <div className="files-panel">
       <div className="inspector-header">
-        <span>
-          Files Changed ({fileChanges.length}){' '}
-          <span className="diffstat">
+        <span className="inspector-title">
+          Files Changed ({fileChanges.length})
+          <span className="panel-sub diffstat">
             <span className="add">+{totalAdd}</span> <span className="del">−{totalDel}</span>
           </span>
         </span>

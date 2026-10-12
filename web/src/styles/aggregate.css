@@ -1,0 +1,143 @@
+/* ─── Aggregated tool runs (collapsed bursts of tool calls) ──────────── */
+
+.aggregate-row {
+  position: relative;
+}
+.aggregate-head .row-gutter {
+  padding-top: 4px;
+}
+.aggregate-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  text-align: left;
+}
+.aggregate-count {
+  flex-shrink: 0;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.aggregate-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.aggregate-tool .aggregate-n {
+  margin-left: 4px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+.aggregate-duration {
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.aggregate-errors {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--error-tint);
+  color: var(--error);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.aggregate-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.aggregate-row.open .aggregate-count {
+  color: var(--text-2);
+}
+
+/* Expanded body: child rows hang off a guide line under the header */
+.aggregate-body {
+  position: relative;
+  margin-bottom: 4px;
+}
+.aggregate-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 6px;
+  left: calc(var(--stream-pad) + var(--gutter) + 6px);
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+.aggregate-body .row-body {
+  padding-left: 20px;
+}
+
+/* ─── File change tags + patch view ──────────────────────────────────── */
+
+.change-tag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  background: var(--neutral-tint);
+  color: var(--muted);
+}
+.change-add,
+.change-modify {
+  background: var(--edit-tint);
+  color: var(--edit);
+}
+.change-delete {
+  background: var(--error-tint);
+  color: var(--error);
+}
+
+.patch-view {
+  overflow-x: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.patch-file {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-mono-sm);
+  color: var(--muted);
+}
+.patch-hunk {
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.patch-hunk + .patch-hunk {
+  border-top: 1px solid var(--border-soft);
+}
+.patch-line {
+  padding: 0 10px;
+  white-space: pre;
+}
+.patch-line.add {
+  background: rgba(127, 184, 138, 0.09);
+  color: #a6d2ae;
+}
+.patch-line.del {
+  background: rgba(224, 122, 114, 0.09);
+  color: #eaa59f;
+}

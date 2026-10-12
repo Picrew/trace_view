@@ -1,0 +1,160 @@
+/* ─── Base ────────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(123, 155, 224, 0.3);
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+}
+
+.icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled {
+  cursor: default;
+}
+
+input {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  height: var(--control-h);
+  padding: 0 9px;
+  outline: none;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+input:hover {
+  border-color: var(--border-strong);
+}
+input:focus {
+  border-color: rgba(123, 155, 224, 0.55);
+  background: var(--canvas);
+}
+input::placeholder {
+  color: var(--faint);
+}
+
+:focus-visible {
+  outline: 1.5px solid rgba(123, 155, 224, 0.7);
+  outline-offset: 1px;
+}
+input:focus-visible {
+  outline: none;
+}
+
+/* macOS-like overlay scrollbars: thin, quiet, brighter on hover. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 5px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Shared quiet icon button (sidebar actions, timeline fit, inspector close). */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: var(--r-sm);
+  color: var(--faint);
+  font-size: var(--fs-sm);
+  transition: color 120ms ease, background-color 120ms ease;
+}
+.icon-btn:hover:not(:disabled),
+.icon-btn.on {
+  color: var(--text);
+  background: var(--hover-strong);
+}
+.icon-btn:disabled .icon {
+  animation: spin-icon 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+@keyframes spin-center {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spin-icon {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

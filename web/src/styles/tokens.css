@@ -1,0 +1,74 @@
+/* ==========================================================================
+   Design tokens — Trace Review 2.0 "Quiet Developer Tool"
+   Color carries meaning only: blue = model, amber = tools, green = edits,
+   red = errors. Everything else is a neutral grey step.
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+
+  /* Neutral layers (darkest → lightest) */
+  --canvas: #0f1114;        /* main work area */
+  --surface: #14161a;       /* sidebar, panels, status bar */
+  --raised: #1a1d22;        /* selected rows, controls, popovers */
+  --raised-2: #20242a;      /* pressed / active controls */
+  --hover: rgba(255, 255, 255, 0.032);
+  --hover-strong: rgba(255, 255, 255, 0.055);
+
+  --border: #262a31;        /* structural dividers */
+  --border-soft: #1c1f25;   /* row dividers, hairlines */
+  --border-strong: #343944; /* control outlines on hover/focus */
+
+  /* Text */
+  --text: #e6e9ef;
+  --text-2: #c9ced6;        /* body copy inside events */
+  --muted: #9aa3b0;
+  --faint: #6b7380;
+  --ghost: #4a515c;
+
+  /* Semantic hues (soft, desaturated) */
+  --accent: #7b9be0;
+  --model: #7b9be0;
+  --tool: #d0a35c;
+  --edit: #7fb88a;
+  --error: #e07a72;
+
+  /* Semantic tints for tags / backgrounds */
+  --accent-tint: rgba(123, 155, 224, 0.12);
+  --model-tint: rgba(123, 155, 224, 0.12);
+  --tool-tint: rgba(208, 163, 92, 0.11);
+  --edit-tint: rgba(127, 184, 138, 0.11);
+  --error-tint: rgba(224, 122, 114, 0.12);
+  --neutral-tint: rgba(255, 255, 255, 0.05);
+
+  /* Type */
+  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Helvetica Neue', sans-serif;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'PingFang SC', monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 16px;
+  --fs-mono-sm: 11px;
+  --fs-mono: 12px;
+
+  /* Shape & rhythm */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --control-h: 26px;
+  --gutter: 68px;           /* time column width in the event stream */
+  --stream-pad: 16px;
+
+  /* Popover elevation — the only shadow in the system */
+  --popover-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.3);
+
+  /* Legacy aliases (kept so nothing renders unstyled) */
+  --bg: var(--canvas);
+  --bg1: var(--surface);
+  --bg2: var(--raised);
+  --bg3: var(--raised-2);
+  --text-dim: var(--muted);
+  --text-faint: var(--faint);
+  --green: var(--edit);
+  --red: var(--error);
+  --yellow: var(--tool);
+}

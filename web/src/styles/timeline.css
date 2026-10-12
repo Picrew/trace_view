@@ -1,0 +1,90 @@
+/* ─── Timeline ───────────────────────────────────────────────────────── */
+
+.timeline-wrap {
+  position: relative;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px 0 var(--stream-pad);
+}
+.timeline-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+.timeline-toolbar .icon-btn {
+  height: 20px;
+  font-size: var(--fs-xs);
+}
+.timeline-hint {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--ghost);
+  white-space: nowrap;
+}
+.timeline-stage {
+  position: relative;
+  padding-bottom: 6px;
+}
+.timeline-canvas {
+  display: block;
+  width: 100%;
+  cursor: default;
+}
+.timeline-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 6px;
+  width: 1px;
+  background: rgba(230, 233, 239, 0.22);
+  pointer-events: none;
+  display: none;
+}
+.timeline-tooltip {
+  position: absolute;
+  z-index: 30;
+  max-width: 300px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: var(--raised-2);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--popover-shadow);
+  font-size: var(--fs-xs);
+  pointer-events: none;
+}
+.tt-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  word-break: break-word;
+}
+.tt-swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 3px;
+  padding-left: 14px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  font-variant-numeric: tabular-nums;
+}
+.tt-row.err {
+  color: var(--error);
+  font-family: var(--sans);
+}

@@ -4,7 +4,7 @@
 
 不是聊天记录查看器,而是 **Agent Run Inspector**:准确呈现 Agent "实际上是怎么运行的",而不只是它"说了什么"。
 
-![screenshot](docs/images/screenshot-v0.2.png)
+![screenshot](docs/images/screenshot-v0.0.11.png)
 
 ## 特性
 

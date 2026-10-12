@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { fmtDuration } from '../format.js';
 import { JsonView, CopyButton } from './JsonView.js';
 import { shortPath } from './Trajectory.js';
+import { IconClose } from './Icons.js';
 
 export function Inspector({
   run,
@@ -87,8 +88,8 @@ export function Inspector({
         <span className="inspector-title">
           Inspector <span className={`kind-pill kind-${event.kind}`}>{event.kind.replace('_', ' ')}</span>
         </span>
-        <button className="icon-btn" onClick={onClose} title="Close">
-          ✕
+        <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close inspector">
+          <IconClose size={13} />
         </button>
       </div>
       <div className="inspector-body">

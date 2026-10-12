@@ -1,25 +1,28 @@
+import { Fragment } from 'react';
 import type { SearchMatch } from '../api.js';
 import { fmtTime } from '../format.js';
+import { IconSearch } from './Icons.js';
 
 export interface FilterState {
   active: Set<string>;
 }
 
-export const FILTER_DEFS: Array<{ id: string; label: string }> = [
-  { id: 'user', label: 'User' },
-  { id: 'assistant', label: 'Assistant' },
-  { id: 'reasoning', label: 'Reasoning' },
-  { id: 'tools', label: 'Tools' },
-  { id: 'bash', label: 'Bash' },
-  { id: 'read', label: 'Read' },
-  { id: 'edit', label: 'Edit/Write' },
-  { id: 'grep', label: 'Search' },
-  { id: 'mcp', label: 'MCP' },
-  { id: 'errors', label: 'Errors' },
-  { id: 'synthetic', label: 'Synthetic' },
-  { id: 'compaction', label: 'Compaction' },
-  { id: 'system', label: 'System' },
-  { id: 'requests', label: 'Requests' },
+/** `group` only drives the visual dividers in the toolbar. */
+export const FILTER_DEFS: Array<{ id: string; label: string; group: 'conversation' | 'tools' | 'signals' }> = [
+  { id: 'user', label: 'User', group: 'conversation' },
+  { id: 'assistant', label: 'Assistant', group: 'conversation' },
+  { id: 'reasoning', label: 'Reasoning', group: 'conversation' },
+  { id: 'tools', label: 'Tools', group: 'tools' },
+  { id: 'bash', label: 'Bash', group: 'tools' },
+  { id: 'read', label: 'Read', group: 'tools' },
+  { id: 'edit', label: 'Edit/Write', group: 'tools' },
+  { id: 'grep', label: 'Search', group: 'tools' },
+  { id: 'mcp', label: 'MCP', group: 'tools' },
+  { id: 'errors', label: 'Errors', group: 'signals' },
+  { id: 'synthetic', label: 'Synthetic', group: 'signals' },
+  { id: 'compaction', label: 'Compaction', group: 'signals' },
+  { id: 'system', label: 'System', group: 'signals' },
+  { id: 'requests', label: 'Requests', group: 'signals' },
 ];
 
 export function FilterBar({
@@ -45,22 +48,35 @@ export function FilterBar({
 }): JSX.Element {
   return (
     <div className="filter-bar">
-      <div className="filter-chips">
-        <button className={`filter-chip ${filters.active.size === 0 ? 'on' : ''}`} onClick={() => onToggle('__all')}>
+      <div className="filter-chips" role="toolbar" aria-label="Event filters">
+        <button
+          className={`filter-chip ${filters.active.size === 0 ? 'on' : ''}`}
+          aria-pressed={filters.active.size === 0}
+          onClick={() => onToggle('__all')}
+        >
           All
         </button>
-        {FILTER_DEFS.map((f) => (
-          <button key={f.id} className={`filter-chip ${filters.active.has(f.id) ? 'on' : ''}`} onClick={() => onToggle(f.id)}>
-            {f.label}
-          </button>
+        {FILTER_DEFS.map((f, i) => (
+          <Fragment key={f.id}>
+            {(i === 0 || FILTER_DEFS[i - 1].group !== f.group) && <span className="filter-sep" aria-hidden="true" />}
+            <button
+              className={`filter-chip ${filters.active.has(f.id) ? 'on' : ''}`}
+              aria-pressed={filters.active.has(f.id)}
+              onClick={() => onToggle(f.id)}
+            >
+              {f.label}
+            </button>
+          </Fragment>
         ))}
       </div>
       <div className="filter-right">
-        <span className="filter-count">
+        <span className={`filter-count ${shown !== total ? 'filtered' : ''}`} title="Events shown / total">
           {shown}/{total}
         </span>
         <div className="search-box">
+          <IconSearch size={13} className="field-icon" />
           <input
+            aria-label="Search events"
             placeholder="Search events, tools, commands, paths…"
             value={search}
             onChange={(e) => onSearch(e.target.value)}

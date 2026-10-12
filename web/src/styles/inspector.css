@@ -1,0 +1,171 @@
+/* ─── Inspector / files panel (right) ────────────────────────────────── */
+
+.inspector,
+.files-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.files-panel {
+  max-height: 45%;
+  border-bottom: 1px solid var(--border);
+}
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.inspector-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.panel-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  font-weight: 400;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.kind-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--neutral-tint);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.kind-pill.kind-assistant_message,
+.kind-pill.kind-turn_boundary { background: var(--model-tint); color: var(--model); }
+.kind-pill.kind-tool_call,
+.kind-pill.kind-tool_result { background: var(--tool-tint); color: var(--tool); }
+.kind-pill.kind-file_change { background: var(--edit-tint); color: var(--edit); }
+.kind-pill.kind-error { background: var(--error-tint); color: var(--error); }
+
+.inspector-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 14px 24px;
+}
+.inspector-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.inspector-section {
+  margin-bottom: 20px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  margin-bottom: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+.meta-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.meta-table td {
+  padding: 4px 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.meta-table tr:last-child td {
+  border-bottom: none;
+}
+.meta-table .meta-k {
+  width: 104px;
+  padding-right: 12px;
+  white-space: nowrap;
+  color: var(--faint);
+}
+.meta-v.mono {
+  font-size: var(--fs-mono-sm);
+  color: var(--text-2);
+  word-break: break-all;
+}
+.inspector-note {
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+.inspector-loading {
+  padding: 8px 0;
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+.inspector-output {
+  margin-bottom: 10px;
+}
+.inspector-output-label {
+  margin-bottom: 4px;
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+.raw-json {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: var(--canvas);
+}
+
+/* Files panel */
+.files-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 6px 8px;
+}
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  text-align: left;
+}
+.file-row:hover {
+  background: var(--hover-strong);
+}
+.file-path {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-mono-sm);
+  color: var(--text-2);
+}
+.file-times {
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  color: var(--faint);
+}

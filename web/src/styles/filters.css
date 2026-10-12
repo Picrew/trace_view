@@ -1,0 +1,192 @@
+/* ─── Filter toolbar ─────────────────────────────────────────────────── */
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px 0 calc(var(--stream-pad) - 8px);
+  border-bottom: 1px solid var(--border);
+  background: var(--canvas);
+  flex-shrink: 0;
+}
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-right: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* When the row is narrower than its chips (e.g. Inspector open) the last
+     visible chip fades out instead of being hard-clipped. The 16px padding
+     keeps the fade invisible while everything fits. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
+.filter-chips::-webkit-scrollbar {
+  display: none;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 100ms ease, background-color 100ms ease;
+}
+.filter-chip:hover {
+  color: var(--text-2);
+  background: var(--hover);
+}
+.filter-chip.on {
+  color: var(--text);
+  background: var(--raised-2);
+}
+.filter-sep {
+  width: 1px;
+  height: 12px;
+  margin: 0 6px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Count + search join the bar's own flex row so shrink priority is explicit:
+   the search box narrows first (to 180px), then the chip row scrolls. */
+.filter-right {
+  display: contents;
+}
+.filter-count {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.filter-count.filtered {
+  color: var(--muted);
+}
+.search-box {
+  position: relative;
+  flex: 0 1000 340px;
+  min-width: 180px;
+}
+.search-box input {
+  width: 100%;
+  padding: 0 26px 0 27px;
+  background: var(--surface);
+}
+.search-box input:focus {
+  background: var(--canvas);
+}
+.search-box .field-icon {
+  position: absolute;
+  left: 9px;
+  top: 6px;
+  color: var(--faint);
+  pointer-events: none;
+}
+.search-spinner {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border-strong);
+  border-top-color: var(--muted);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Search results popover */
+.search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  width: 620px;
+  max-width: 90vw;
+  overflow: hidden;
+  background: var(--raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--popover-shadow);
+}
+.search-results-header {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+.search-results-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--r-xs);
+  text-align: left;
+  font-size: var(--fs-sm);
+}
+.search-result:hover {
+  background: var(--hover-strong);
+}
+.kind-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--faint);
+}
+.kind-dot.kind-assistant_message { background: var(--model); }
+.kind-dot.kind-user_message { background: var(--text-2); }
+.kind-dot.kind-tool_call,
+.kind-dot.kind-tool_result { background: var(--tool); }
+.kind-dot.kind-file_change { background: var(--edit); }
+.kind-dot.kind-error { background: var(--error); }
+.kind-dot.kind-synthetic_message,
+.kind-dot.kind-reasoning { background: var(--faint); }
+.search-result-meta {
+  flex-shrink: 0;
+  width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+}
+.search-result-snippet {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+}
+.search-result-time {
+  flex-shrink: 0;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  font-variant-numeric: tabular-nums;
+}
+.search-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}

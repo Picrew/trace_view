@@ -1,0 +1,204 @@
+/* ─── Run header ─────────────────────────────────────────────────────── */
+
+.run-header {
+  padding: 14px var(--stream-pad) 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--canvas);
+  flex-shrink: 0;
+}
+.run-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.run-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.run-title {
+  min-width: 0;
+  font-size: var(--fs-lg);
+  line-height: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  padding: 0 7px 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--edit-tint);
+  color: var(--edit);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+.live-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Context line: provider · project · branch · model · time range */
+.run-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 2px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 18px;
+}
+.run-sub > * {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.run-sub > * + *::before {
+  content: '·';
+  margin: 0 8px;
+  color: var(--ghost);
+}
+.run-provider {
+  color: var(--text-2);
+}
+.git-branch,
+.run-models {
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+}
+.git-branch .icon {
+  color: var(--faint);
+}
+.run-range {
+  font-variant-numeric: tabular-nums;
+}
+.run-note {
+  font-size: var(--fs-xs);
+  color: var(--tool);
+}
+
+/* ─── Metrics bar ────────────────────────────────────────────────────── */
+
+/* Wraps when narrow (e.g. Inspector open). Every group carries its divider
+   in a 37px left gutter; the row is shifted left by that gutter and clipped,
+   so a group starting a line sits flush with no stray divider. */
+.run-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 8px;
+  margin: 12px 0 0 -37px;
+  min-width: 0;
+  clip-path: inset(-6px -6px -6px 37px);
+}
+.stat-group {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  flex-shrink: 0;
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+}
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.stat-value {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.stat-label {
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+.stat-group.secondary .stat-value {
+  font-weight: 500;
+  color: var(--text-2);
+}
+.stat.zero .stat-value {
+  color: var(--faint);
+  font-weight: 500;
+}
+.stat.bad .stat-value {
+  color: var(--error);
+}
+.stat.warn .stat-value {
+  color: var(--tool);
+}
+
+/* Fills the rest of the line. The file name contributes 0 to its intrinsic
+   width, so it ellipsizes first; the group only wraps once the note and
+   Files button no longer fit. */
+.run-stats-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 0 auto;
+  padding-left: 16px;
+  min-width: 0;
+}
+.run-fileinfo {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  text-align: right;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.run-warnings {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  color: var(--tool);
+  white-space: nowrap;
+  cursor: help;
+}
+.files-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+.files-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+.files-btn.on {
+  color: var(--text);
+  background: var(--raised-2);
+  border-color: var(--border-strong);
+}

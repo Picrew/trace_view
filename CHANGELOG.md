@@ -4,6 +4,19 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.11] — 2026-10-12
+
+### Changed
+- **Trace Review 2.0 视觉层**("Quiet Developer Tool")：只改视觉，数据、交互、布局、API 不变。颜色只表达含义（蓝 Model / 琥珀工具 / 绿 Edit·Write / 红错误），用排版代替效果，去掉渐变、胶囊与装饰阴影。
+- 样式拆分为 `web/src/styles/` 下 14 个文件，`tokens.css` 统一颜色、字号、圆角；新增 `Icons.tsx` 统一 SVG 图标，替换字符图标。
+- Sidebar 改为 Linear 式列表；Header 改为标题 + 上下文行 + 主次两组指标；Timeline 低饱和、轨道很淡，新增 hover 游标线；Filters 改为低对比紧凑工具栏；Event Stream 不再用卡片，改为细分隔线与 hover 底色；状态栏改为 macOS 风格。
+- 窄窗口适配（Inspector 打开 / 1280px）：搜索框先收缩，再让滤镜行滚动并在边缘淡出；指标栏可换行，文件名先省略，Files 按钮始终可见。
+
+### Added
+- `scripts/visual-snapshot.ts`：视觉回归截图脚本（6 种 UI 状态，可指定视口尺寸）。
+
+[详情 →](docs/releases/v0.0.11.md)
+
 ## [0.0.10] — 2026-10-08
 
 ### Changed
@@ -97,6 +110,8 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 [详情 →](docs/releases/v0.0.1.md)
 
+[0.0.11]: https://github.com/Picrew/trace_view/releases/tag/v0.0.11
+[0.0.10]: https://github.com/Picrew/trace_view/releases/tag/v0.0.10
 [0.0.9]: https://github.com/Picrew/trace_view/releases/tag/v0.0.9
 [0.0.8]: https://github.com/Picrew/trace_view/releases/tag/v0.0.8
 [0.0.7]: https://github.com/Picrew/trace_view/releases/tag/v0.0.7

@@ -1,0 +1,174 @@
+/* ─── Tool rows ──────────────────────────────────────────────────────── */
+
+.tool-row .row-gutter {
+  padding-top: 4px;
+}
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  text-align: left;
+}
+
+/* Category tag — blue model / amber tools / green edits / red errors */
+.tool-cat,
+.aggregate-tool {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--tool-tint);
+  color: var(--tool);
+}
+.tool-cat {
+  min-width: 42px;
+  max-width: 180px;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cat-edit,
+.cat-write {
+  background: var(--edit-tint);
+  color: var(--edit);
+}
+.tool-row.has-error .tool-cat {
+  background: var(--error-tint);
+  color: var(--error);
+}
+
+.tool-summary {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-mono);
+  color: var(--text-2);
+}
+.tool-row.has-error .tool-summary {
+  color: #e8a39d;
+}
+.tool-dur {
+  flex-shrink: 0;
+  min-width: 40px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.tool-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 14px;
+  font-size: var(--fs-xs);
+}
+.tool-status.ok {
+  color: var(--ghost);
+}
+.tool-row:hover .tool-status.ok {
+  color: var(--edit);
+}
+.tool-status.err {
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--error-tint);
+  color: var(--error);
+  font-weight: 500;
+}
+.tool-status.pending {
+  color: var(--faint);
+}
+.tool-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.diffstat {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  font-variant-numeric: tabular-nums;
+}
+.diffstat .add { color: var(--edit); }
+.diffstat .del { color: var(--error); }
+
+/* Expanded detail: no card — an indented column hung off a guide line */
+.tool-detail {
+  min-width: 0;
+  margin: 2px 0 10px 6px;
+  padding: 4px 0 2px 14px;
+  border-left: 1px solid var(--border);
+  cursor: auto;
+}
+.tool-section {
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.tool-section-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 5px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--faint);
+}
+.tool-section-label.clickable:hover {
+  color: var(--text-2);
+}
+.tool-output {
+  max-height: 420px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  line-height: 1.55;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tool-output.err {
+  border-color: rgba(224, 122, 114, 0.22);
+  background: rgba(224, 122, 114, 0.05);
+  color: #e8a39d;
+}
+.tool-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding-top: 2px;
+}
+.meta-chip {
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+.meta-chip .mono {
+  font-size: var(--fs-mono-sm);
+  color: var(--muted);
+}
+.meta-label {
+  margin-right: 2px;
+}
+.tool-hint {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--ghost);
+}

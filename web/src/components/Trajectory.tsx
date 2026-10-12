@@ -6,6 +6,7 @@ import { buildRows } from '../rows.js';
 import { fmtDuration, fmtTime } from '../format.js';
 import { SafeMarkdown } from './SafeMarkdown.js';
 import { JsonView } from './JsonView.js';
+import { IconAlert, IconArrowDown, IconCheck, IconChevron, IconCompact, IconImage, IconInfo, IconUnknown } from './Icons.js';
 
 export function Trajectory({
   events,
@@ -157,7 +158,8 @@ export function Trajectory({
       </div>
       {live && !follow && (
         <button className="follow-btn" onClick={jumpToBottom} title="Follow live events">
-          ↓ Follow live
+          <IconArrowDown size={13} />
+          Follow live
         </button>
       )}
     </div>
@@ -220,15 +222,15 @@ const RowView = memo(function RowView({
     case 'turn_boundary':
       return <BoundaryRow e={e} onSelect={onSelect} />;
     case 'system':
-      return <SmallRow e={e} tone="system" icon="⚙" text={`${e.subtype ?? 'system'}${e.text ? ` — ${e.text}` : ''}`} onSelect={onSelect} />;
+      return <SmallRow e={e} tone="system" icon={<IconInfo size={13} />} text={`${e.subtype ?? 'system'}${e.text ? ` — ${e.text}` : ''}`} onSelect={onSelect} />;
     case 'error':
-      return <SmallRow e={e} tone="error" icon="✗" text={e.message} onSelect={onSelect} />;
+      return <SmallRow e={e} tone="error" icon={<IconAlert size={13} />} text={e.message} onSelect={onSelect} />;
     case 'compaction':
-      return <SmallRow e={e} tone="warn" icon="⇲" text={e.text ?? 'Context compacted'} onSelect={onSelect} />;
+      return <SmallRow e={e} tone="warn" icon={<IconCompact size={13} />} text={e.text ?? 'Context compacted'} onSelect={onSelect} />;
     case 'file_change':
       return <FileChangeRow e={e} selected={e.id === selectedEventId} onSelect={onSelect} />;
     default:
-      return <SmallRow e={e} tone="dim" icon="?" text={`${(e as { rawType?: string }).rawType ?? 'unknown'}${(e as { note?: string }).note ? ` — ${(e as { note?: string }).note}` : ''}`} onSelect={onSelect} />;
+      return <SmallRow e={e} tone="dim" icon={<IconUnknown size={13} />} text={`${(e as { rawType?: string }).rawType ?? 'unknown'}${(e as { note?: string }).note ? ` — ${(e as { note?: string }).note}` : ''}`} onSelect={onSelect} />;
   }
 });
 
@@ -259,9 +261,14 @@ function MessageRow({
       </div>
       <div className="row-body">
         <div className="row-label">
-          {tone === 'user' ? '● ' : '◆ '}
+          <span className="role-dot" aria-hidden="true" />
           {label}
-          {hasImages && <span className="img-badge" title="message included pasted images">🖼 {tone === 'user' ? '' : ''}</span>}
+          {hasImages && (
+            <span className="img-badge" title="message included pasted images">
+              <IconImage size={12} />
+              Image
+            </span>
+          )}
           {model && <span className="row-model">{model}</span>}
         </div>
         <div className="message-text">
@@ -319,8 +326,9 @@ function ReasoningRow({
         <TimeGutter e={e} />
       </div>
       <div className="row-body">
-        <button className="reasoning-toggle" onClick={(ev) => { ev.stopPropagation(); onToggle(); }}>
-          {open || !long ? '▾' : '▸'} Reasoning
+        <button className="reasoning-toggle" aria-expanded={open || !long} onClick={(ev) => { ev.stopPropagation(); onToggle(); }}>
+          <IconChevron size={12} className={`chev ${open || !long ? 'open' : ''}`} />
+          Reasoning
         </button>
         {(open || !long) && <div className="reasoning-text">{e.text}</div>}
       </div>
@@ -331,11 +339,12 @@ function ReasoningRow({
 function BoundaryRow({ e, onSelect }: { e: Extract<TraceEvent, { kind: 'turn_boundary' }>; onSelect: (id: string) => void }): JSX.Element {
   return (
     <div className="row boundary-row" onClick={() => onSelect(e.id)}>
-      <span className="boundary-line" />
       <span className="boundary-label">
-        Request {e.requestIndex + 1}
-        {e.model ? ` · ${e.model}` : ''}
-        {e.durationMs !== undefined ? ` · ${fmtDuration(e.durationMs)}` : ''}
+        <span className="boundary-tag">Request {e.requestIndex + 1}</span>
+        <span className="boundary-meta">
+          {e.model ? ` · ${e.model}` : ''}
+          {e.durationMs !== undefined ? ` · ${fmtDuration(e.durationMs)}` : ''}
+        </span>
       </span>
       <span className="boundary-line" />
     </div>
@@ -351,7 +360,7 @@ function SmallRow({
 }: {
   e: TraceEvent;
   tone: string;
-  icon: string;
+  icon: JSX.Element;
   text: string;
   onSelect: (id: string) => void;
 }): JSX.Element {
@@ -400,26 +409,39 @@ function AggregateRow({
   selectedEventId: string | null;
   onSelect: (eventId: string) => void;
 }): JSX.Element {
-  const counts = new Map<string, number>();
+  const counts = new Map<string, { n: number; cat: string }>();
   for (const p of pairs) {
     const name = p.call?.toolName ?? p.result?.toolName ?? '?';
-    counts.set(name, (counts.get(name) ?? 0) + 1);
+    const entry = counts.get(name);
+    if (entry) entry.n++;
+    else counts.set(name, { n: 1, cat: p.call?.toolCategory ?? 'other' });
   }
   const totalMs = pairs.reduce((a, p) => a + (p.result?.durationMs ?? p.call?.durationMs ?? 0), 0);
   const errorCount = pairs.filter((p) => p.result?.isError).length;
+  const anchor = pairs[0]?.call ?? pairs[0]?.result;
   return (
-    <div className="aggregate-row">
-      <button className="aggregate-header" onClick={onToggle}>
-        <span className="aggregate-chevron">{expanded ? '▾' : '▸'}</span>
-        <span className="aggregate-count">{pairs.length} tool actions</span>
-        {[...counts.entries()].map(([name, n]) => (
-          <span key={name} className="aggregate-tool">
-            {name} ×{n}
-          </span>
-        ))}
-        {totalMs > 0 && <span className="aggregate-duration">{fmtDuration(totalMs)}</span>}
-        {errorCount > 0 && <span className="aggregate-errors">{errorCount} failed</span>}
-      </button>
+    <div className={`aggregate-row ${expanded ? 'open' : ''}`}>
+      <div className="row aggregate-head">
+        <div className="row-gutter">{anchor && <TimeGutter e={anchor} />}</div>
+        <div className="row-body">
+          <button className="aggregate-header" aria-expanded={expanded} onClick={onToggle}>
+            <span className="aggregate-chevron">
+              <IconChevron size={12} className={`chev ${expanded ? 'open' : ''}`} />
+            </span>
+            <span className="aggregate-count">{pairs.length} tool actions</span>
+            <span className="aggregate-tools">
+              {[...counts.entries()].map(([name, { n, cat }]) => (
+                <span key={name} className={`aggregate-tool cat-${cat}`}>
+                  {name}
+                  <span className="aggregate-n">×{n}</span>
+                </span>
+              ))}
+            </span>
+            {errorCount > 0 && <span className="aggregate-errors">{errorCount} failed</span>}
+            {totalMs > 0 && <span className="aggregate-duration">{fmtDuration(totalMs)}</span>}
+          </button>
+        </div>
+      </div>
       {expanded && (
         <div className="aggregate-body">
           {pairs.map((p, i) => (
@@ -477,8 +499,18 @@ function ToolRow({
             </span>
           )}
           {dur !== undefined && <span className="tool-dur">{fmtDuration(dur)}</span>}
-          {isError ? <span className="tool-status err">error</span> : result ? <span className="tool-status ok">✓</span> : <span className="tool-status pending">…</span>}
-          <span className="tool-chevron">{expanded ? '▾' : '▸'}</span>
+          {isError ? (
+            <span className="tool-status err">error</span>
+          ) : result ? (
+            <span className="tool-status ok" title="Succeeded">
+              <IconCheck size={12} />
+            </span>
+          ) : (
+            <span className="tool-status pending" title="Pending">…</span>
+          )}
+          <span className="tool-chevron">
+            <IconChevron size={12} className={`chev ${expanded ? 'open' : ''}`} />
+          </span>
         </button>
         {expanded && (
           <div className="tool-detail" onClick={(e) => e.stopPropagation()}>
@@ -521,7 +553,8 @@ function OutputBlock({ label, text, tone }: { label: string; text: string; tone?
   return (
     <div className="tool-section">
       <button className="tool-section-label clickable" onClick={() => setExpanded(!expanded)}>
-        {label} {isLong ? (expanded ? '▾' : '▸') : ''}
+        {label}
+        {isLong && <IconChevron size={11} className={`chev ${expanded ? 'open' : ''}`} />}
       </button>
       <pre className={`tool-output ${tone === 'err' ? 'err' : ''}`}>{shown}</pre>
     </div>

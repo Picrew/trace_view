@@ -1,0 +1,236 @@
+/* ─── Messages, reasoning, synthetic, small rows ─────────────────────── */
+
+.message-row {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+.message-row .row-gutter {
+  padding-top: 0;
+}
+.row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  margin-bottom: 2px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.role-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.message-row.user .role-dot {
+  background: var(--text-2);
+}
+.message-row.assistant .role-dot {
+  background: var(--model);
+}
+.row-model {
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  font-weight: 400;
+  color: var(--faint);
+}
+.img-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--neutral-tint);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+.message-text {
+  max-width: 860px;
+  padding-left: 14px;
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.message-row.user .message-text {
+  color: var(--text);
+}
+.truncated-note {
+  margin-top: 4px;
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+
+/* Markdown (rendered by SafeMarkdown — escape-first) */
+.md p { margin: 0 0 8px; }
+.md p:last-child { margin-bottom: 0; }
+.md h2, .md h3, .md h4, .md h5 {
+  margin: 14px 0 6px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+}
+.md ul, .md ol { margin: 4px 0 8px 18px; }
+.md li { margin: 2px 0; }
+.md li::marker { color: var(--faint); }
+.md blockquote {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted);
+}
+.md a { color: var(--accent); text-decoration: none; }
+.md a:hover { text-decoration: underline; }
+.md hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.md strong { color: var(--text); font-weight: 600; }
+.md code {
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--neutral-tint);
+  font-family: var(--mono);
+  font-size: 0.88em;
+  color: var(--text);
+}
+.md .code-block {
+  margin: 8px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+  line-height: 1.55;
+  color: var(--text-2);
+  white-space: pre;
+}
+
+/* Synthetic (harness-injected) messages: dashed = "not a real turn" */
+.synthetic-row {
+  padding-top: 6px;
+  padding-bottom: 8px;
+}
+.synthetic-row .row-label {
+  font-weight: 400;
+}
+.synthetic-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  border: 1px dashed var(--border-strong);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.synthetic-kind {
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+.synthetic-text {
+  max-width: 860px;
+  margin-left: 2px;
+  padding-left: 11px;
+  border-left: 1px dashed var(--border-strong);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Reasoning: quieter than the answer it precedes */
+.reasoning-row {
+  padding-top: 4px;
+  padding-bottom: 6px;
+}
+.reasoning-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+.reasoning-toggle:hover {
+  color: var(--text-2);
+}
+.reasoning-text {
+  max-width: 860px;
+  margin: 2px 0 2px 5px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Chevron glyph shared by toggles: points right, rotates when open */
+.chev {
+  color: var(--ghost);
+  transition: transform 120ms ease;
+}
+.chev.open {
+  transform: rotate(90deg);
+}
+button:hover .chev {
+  color: var(--muted);
+}
+
+/* System / error / compaction / unknown */
+.small-row .row-gutter {
+  padding-top: 3px;
+}
+.small-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--faint);
+}
+.small-icon {
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--ghost);
+}
+.small-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: var(--fs-mono-sm);
+}
+.small-row.system .small-text,
+.small-row.dim .small-text {
+  color: var(--ghost);
+}
+.small-row:hover .small-text {
+  color: var(--faint);
+}
+.small-row.error .small-icon,
+.small-row.error .small-text {
+  color: var(--error);
+}
+.small-row.warn .small-icon {
+  color: var(--muted);
+}
+.small-row.warn .small-text {
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+}
+.file-change-row .mono {
+  font-size: var(--fs-mono-sm);
+  color: var(--text-2);
+}

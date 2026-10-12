@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { SessionSummary } from '../types.js';
 import { PROVIDER_LABEL, dateGroup, fmtBytes, fmtDuration, fmtTokens, relativeTime } from '../format.js';
+import { IconPlus, IconRefresh, IconSearch } from './Icons.js';
 
 const PROVIDER_ORDER: string[] = ['claude-code', 'codex', 'opencode', 'pi', 'generic'];
 const PROVIDER_ABBR: Record<string, string> = {
@@ -88,11 +89,23 @@ export function SessionLibrary({
           <span className="session-count">{sessions.length} sessions</span>
         </div>
         <div className="library-actions">
-          <button className="icon-btn" title="Rescan session directories" onClick={onRefresh} disabled={refreshing}>
-            {refreshing ? '⟳' : '↻'}
+          <button
+            className="icon-btn"
+            title="Rescan session directories"
+            aria-label="Rescan session directories"
+            onClick={onRefresh}
+            disabled={refreshing}
+          >
+            <IconRefresh />
           </button>
-          <button className="icon-btn" title="Import a trace file or folder by path" onClick={() => setImportOpen(!importOpen)}>
-            +
+          <button
+            className={`icon-btn ${importOpen ? 'on' : ''}`}
+            title="Import a trace file or folder by path"
+            aria-label="Import a trace file or folder by path"
+            aria-expanded={importOpen}
+            onClick={() => setImportOpen(!importOpen)}
+          >
+            <IconPlus />
           </button>
         </div>
       </div>
@@ -100,6 +113,8 @@ export function SessionLibrary({
       {importOpen && (
         <div className="import-box">
           <input
+            autoFocus
+            aria-label="Trace file or folder path"
             placeholder="/absolute/path/to/trace.jsonl or folder"
             value={importPath}
             onChange={(e) => setImportPath(e.target.value)}
@@ -116,15 +131,17 @@ export function SessionLibrary({
       )}
 
       <div className="library-search">
-        <input placeholder="Search sessions…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <IconSearch size={13} className="field-icon" />
+        <input aria-label="Search sessions" placeholder="Search sessions…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </div>
 
-      <div className="provider-chips">
+      <div className={`provider-chips ${providerFilter.size > 0 ? 'filtering' : ''}`}>
         {chipProviders.map((p) => (
           <button
             key={p}
             className={`provider-chip provider-${p} ${providerFilter.size === 0 || providerFilter.has(p) ? 'on' : 'off'}`}
             onClick={() => toggleProvider(p)}
+            aria-pressed={providerFilter.has(p)}
           >
             <span className="provider-dot" />
             {PROVIDER_LABEL[p] ?? p}
@@ -150,12 +167,9 @@ export function SessionLibrary({
 
 function SessionItem({ s, active, onSelect }: { s: SessionSummary; active: boolean; onSelect: (id: string) => void }): JSX.Element {
   return (
-    <button className={`session-item ${active ? 'active' : ''}`} onClick={() => onSelect(s.id)}>
+    <button className={`session-item ${active ? 'active' : ''}`} aria-current={active ? 'true' : undefined} onClick={() => onSelect(s.id)}>
       <div className="session-title-line">
         {s.live && <span className="live-dot" title="Modified recently — possibly still running" />}
-        <span className={`provider-tag provider-${s.provider}`}>
-          {PROVIDER_ABBR[s.provider] ?? s.provider.slice(0, 2).toUpperCase()}
-        </span>
         <span className="session-title">{s.title}</span>
       </div>
       <div className="session-meta">
@@ -165,6 +179,9 @@ function SessionItem({ s, active, onSelect }: { s: SessionSummary; active: boole
         </span>
       </div>
       <div className="session-meta dim">
+        <span className="session-provider" title={PROVIDER_LABEL[s.provider] ?? s.provider}>
+          {PROVIDER_ABBR[s.provider] ?? s.provider.slice(0, 2).toUpperCase()}
+        </span>
         <span>{relativeTime(s.mtimeMs)}</span>
         {s.endedAt && s.startedAt && <span>{fmtDuration(Date.parse(s.endedAt) - Date.parse(s.startedAt))}</span>}
         <span>{fmtBytes(s.fileSizeBytes)}</span>
