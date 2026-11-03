@@ -3,6 +3,7 @@ import { stat, open } from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import type { ParseHandle } from '../core/run-builder.js';
 import { buildDerived } from '../core/run-builder.js';
+import { isZstdPath } from '../core/reader.js';
 import type { TraceEvent } from '../core/schema.js';
 import { stripForTransport } from './api.js';
 
@@ -96,7 +97,9 @@ export class RunWatcher {
     // OpenCode: watched file is the session metadata; messages live in other
     // files. Any rewrite (mtime bump) → full re-projection + client reset.
     // There is no cheap byte increment across a multi-file session.
-    if (handle.adapter.id === 'opencode') {
+    // .zst: byteOffset counts decompressed bytes and a compressed file can't be
+    // appended to, so the same mtime-only rule applies.
+    if (handle.adapter.id === 'opencode' || isZstdPath(handle.filePath)) {
       if (st.mtimeMs !== handle.parsed.run.mtimeMs) {
         await this.reparseAndReset();
       } else {

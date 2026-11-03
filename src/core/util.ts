@@ -115,7 +115,8 @@ export function parseTimestampMs(ts: string | undefined | null): number | undefi
 }
 
 export function runIdFor(provider: string, filePath: string, sessionId?: string): string {
-  const h = createHash('sha1').update(filePath).digest('hex').slice(0, 12);
+  // Ignore a `.zst` suffix so a rollout keeps its id when Codex compresses it in place.
+  const h = createHash('sha1').update(filePath.replace(/\.zst$/, '')).digest('hex').slice(0, 12);
   return sessionId ? `${provider}:${sessionId}:${h}` : `${provider}:${h}`;
 }
 

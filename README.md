@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | **Native App** | macOS 原生应用窗口(AppKit + WKWebView):双击即用,有 Dock 图标和菜单栏;同一 server 期间任意浏览器访问 `127.0.0.1:7860` 亦可,两边共存 |
-| **Providers** | Claude Code(`~/.claude/projects`)、Codex CLI(`~/.codex/sessions`,支持 v0/v1/0.148 三代格式)、OpenCode(`~/.local/share/opencode/storage`,session/message/part 三层存储自动聚合)、pi(`~/.pi/agent/sessions`)、通用 `.jsonl`/`.ndjson` 手动导入 |
+| **Providers** | Claude Code(`~/.claude/projects`)、Codex CLI(`~/.codex/sessions` + `archived_sessions`,支持 v0/v1/0.148 三代格式,含压缩的 `.jsonl.zst` 归档)、OpenCode(`~/.local/share/opencode/storage`,session/message/part 三层存储自动聚合)、pi(`~/.pi/agent/sessions`)、通用 `.jsonl`/`.ndjson` 手动导入 |
 | **Session Library** | 自动扫描本地会话,provider 过滤、搜索、按日期分组、live 会话标记 |
 | **Trajectory** | 虚拟滚动的完整轨迹:user/assistant/reasoning/tool call+result/system/error/compaction/unknown,连续工具调用自动聚合,可展开 |
 | **Request Boundaries** | 每个 model request 一条分隔线(带模型名与耗时)——看清一个 run 到底拆了多少次真实请求 |

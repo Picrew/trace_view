@@ -16,7 +16,14 @@ import { PARSER_VERSION } from './schema.js';
 import { defaultParseCtx, type ParseCtx, type ParserStateBase } from './adapter.js';
 import type { TraceAdapter } from './adapter.js';
 import { detectAdapter, getAdapter } from './adapters/index.js';
-import { readHeadLines, readJsonlLines, readSlice, readTailLines } from './reader.js';
+import {
+  isZstdPath,
+  readHeadLines,
+  readJsonlLines,
+  readSlice,
+  readTailLines,
+  zstdContentSize,
+} from './reader.js';
 import { looksLikeOpencodeSession, projectOpencodeSession } from './opencode-projector.js';
 import { emptyStats, oneLine, parseTimestampMs, runIdFor } from './util.js';
 
@@ -49,7 +56,11 @@ export async function parseTraceFile(
   const adapter = opts.provider ? getAdapter(opts.provider) : isOpencode ? getAdapter('opencode') : detectAdapter(head);
   const projection = isOpencode ? await projectOpencodeSession(filePath) : null;
   const state = adapter.createState();
-  const ctx = defaultParseCtx((projection?.totalBytes ?? st.size) / 3000);
+  // Budget by content size: a .zst on disk is ~3× smaller than what we parse.
+  const contentBytes = isZstdPath(filePath)
+    ? ((await zstdContentSize(filePath)) ?? st.size * 4)
+    : (projection?.totalBytes ?? st.size);
+  const ctx = defaultParseCtx(contentBytes / 3000);
   const events: TraceEvent[] = [];
 
   let byteOffset = 0;

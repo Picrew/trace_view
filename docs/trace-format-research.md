@@ -243,7 +243,7 @@ turn_context 中有 `collaboration_mode`、`multi_agent_version` 字段;子 agen
 
 ## 5. Generic adapter
 
-手动导入的 `.jsonl`/`.ndjson`:逐行 parse,按启发式猜字段(`type`/`role`/`content`/`message`/`timestamp`),识别不了的整行进 UnknownEvent 但保留 raw。`.json`(单个对象或数组)同理。`.jsonl.zst` 暂不支持(MVP),UI 提示。
+手动导入的 `.jsonl`/`.ndjson`:逐行 parse,按启发式猜字段(`type`/`role`/`content`/`message`/`timestamp`),识别不了的整行进 UnknownEvent 但保留 raw。`.json`(单个对象或数组)同理。`.jsonl.zst`(Codex 会把已结束的 rollout 原地压缩成 `rollout-*.jsonl.zst`,`sessions/` 与 `archived_sessions/` 都有)透明解压:所有 offset 按解压后字节计,raw 切片从头流式解压;需要 Node ≥ 22.15 的内置 zstd,更老的运行时直接跳过。
 
 ## 6. OpenCode storage 格式(v0.0.8,实测 1.1.34 / 20 sessions / 493 messages / 1948 parts)
 

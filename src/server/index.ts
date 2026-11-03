@@ -262,8 +262,14 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
 async function loadRun(ctx: Ctx, runId: string) {
   const cached = ctx.cache.get(runId);
-  if (cached) return cached;
   const summary: SessionSummary | undefined = ctx.library.get(runId);
+  if (cached && summary && cached.handle.filePath !== summary.filePath) {
+    // Same run, new file (Codex compressed `x.jsonl` → `x.jsonl.zst`): re-parse.
+    cached.watcher?.stop();
+    cached.watcher = null;
+  } else if (cached) {
+    return cached;
+  }
   if (!summary) return null;
   const handle = await parseTraceFile(summary.filePath, { provider: summary.provider });
   return ctx.cache.put(handle);

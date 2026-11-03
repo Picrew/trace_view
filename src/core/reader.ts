@@ -1,5 +1,109 @@
 import { open, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream';
+import zlib from 'node:zlib';
 import { Buffer } from 'node:buffer';
+
+const CHUNK = 1 << 20; // 1 MiB
+
+/** Node ≥ 22.15 / 23.8 ships zstd in zlib; older runtimes simply skip .zst traces. */
+export const ZSTD_SUPPORTED = typeof zlib.createZstdDecompress === 'function';
+
+/**
+ * Codex compresses finished rollouts in place (`x.jsonl` → `x.jsonl.zst`).
+ * For these files every offset (`loc`, `byteOffset`) is in decompressed bytes;
+ * zstd has no random access, so reads stream from the start.
+ */
+export function isZstdPath(filePath: string): boolean {
+  return filePath.endsWith('.zst');
+}
+
+function zstdChunks(filePath: string): AsyncIterable<Buffer> {
+  if (!ZSTD_SUPPORTED) throw new Error('Reading .zst traces needs Node ≥ 22.15');
+  // pipeline() tears down the file stream when the consumer stops early;
+  // real errors still surface through the async iterator.
+  return pipeline(
+    createReadStream(filePath, { highWaterMark: CHUNK }),
+    zlib.createZstdDecompress({ chunkSize: CHUNK }),
+    () => {},
+  );
+}
+
+/**
+ * Decompressed size recorded in the first zstd frame header (Frame_Content_Size).
+ * Cheap size hint for parse budgets; undefined when the encoder omitted it.
+ */
+export async function zstdContentSize(filePath: string): Promise<number | undefined> {
+  const handle = await open(filePath, 'r');
+  try {
+    const h = Buffer.alloc(18); // magic(4) + descriptor(1) + window(1) + dict id(≤4) + FCS(≤8)
+    const { bytesRead } = await handle.read(h, 0, h.length, 0);
+    if (bytesRead < 6 || h.readUInt32LE(0) !== 0xfd2fb528) return undefined;
+    const descriptor = h[4]!;
+    const singleSegment = (descriptor >> 5) & 1;
+    const fcsBytes = [singleSegment ? 1 : 0, 2, 4, 8][descriptor >> 6]!;
+    const pos = 5 + (singleSegment ? 0 : 1) + [0, 1, 2, 4][descriptor & 3]!;
+    if (fcsBytes === 0 || bytesRead < pos + fcsBytes) return undefined;
+    if (fcsBytes === 1) return h[pos];
+    if (fcsBytes === 2) return h.readUInt16LE(pos) + 256;
+    if (fcsBytes === 4) return h.readUInt32LE(pos);
+    return Number(h.readBigUInt64LE(pos));
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Content chunks of a trace file, decompressing `.zst` transparently. */
+async function* readChunks(filePath: string): AsyncGenerator<Buffer> {
+  if (isZstdPath(filePath)) {
+    yield* zstdChunks(filePath);
+    return;
+  }
+  const handle = await open(filePath, 'r');
+  try {
+    while (true) {
+      const chunk = Buffer.alloc(CHUNK);
+      const { bytesRead } = await handle.read(chunk, 0, CHUNK, null);
+      if (bytesRead === 0) break;
+      yield chunk.subarray(0, bytesRead);
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Decompressed bytes [position, position + bytes) — stops reading once covered. */
+async function readZstdRange(filePath: string, position: number, bytes: number): Promise<Buffer> {
+  if (bytes <= 0) return Buffer.alloc(0);
+  const parts: Buffer[] = [];
+  let pos = 0;
+  let got = 0;
+  for await (const chunk of readChunks(filePath)) {
+    const end = pos + chunk.length;
+    if (end > position) {
+      const from = Math.max(0, position - pos);
+      const take = Math.min(chunk.length - from, bytes - got);
+      parts.push(chunk.subarray(from, from + take));
+      got += take;
+      if (got >= bytes) break;
+    }
+    pos = end;
+  }
+  return Buffer.concat(parts);
+}
+
+/** Last `bytes` decompressed bytes (the whole stream is read; only a window is kept). */
+async function readZstdTail(filePath: string, bytes: number): Promise<Buffer> {
+  const parts: Buffer[] = [];
+  let kept = 0;
+  for await (const chunk of readChunks(filePath)) {
+    parts.push(chunk);
+    kept += chunk.length;
+    while (parts.length > 1 && kept - parts[0]!.length >= bytes) kept -= parts.shift()!.length;
+  }
+  const all = Buffer.concat(parts);
+  return all.subarray(Math.max(0, all.length - bytes));
+}
 
 export interface RawLine {
   /** Byte offset of the line start. */
@@ -21,37 +125,28 @@ export async function* readJsonlLines(
   filePath: string,
   opts: { requireCompleteLastLine?: boolean } = {},
 ): AsyncGenerator<RawLine> {
-  const CHUNK = 1 << 20; // 1 MiB
-  const handle = await open(filePath, 'r');
-  try {
-    let buffer = Buffer.alloc(0);
-    let bufferStart = 0; // absolute byte offset of buffer[0]
-    let scanned = 0; // consumed position within buffer
-    while (true) {
-      const chunk = Buffer.alloc(CHUNK);
-      const { bytesRead } = await handle.read(chunk, 0, CHUNK, null);
-      if (bytesRead === 0) break;
-      buffer = Buffer.concat([buffer.subarray(scanned), chunk.subarray(0, bytesRead)]);
-      bufferStart += scanned;
-      scanned = 0;
-      let idx: number;
-      while ((idx = buffer.indexOf(0x0a, scanned)) !== -1) {
-        yield {
-          offset: bufferStart + scanned,
-          length: idx - scanned,
-          text: buffer.subarray(scanned, idx).toString('utf8'),
-        };
-        scanned = idx + 1;
-      }
+  let buffer = Buffer.alloc(0);
+  let bufferStart = 0; // absolute byte offset of buffer[0]
+  let scanned = 0; // consumed position within buffer
+  for await (const chunk of readChunks(filePath)) {
+    buffer = Buffer.concat([buffer.subarray(scanned), chunk]);
+    bufferStart += scanned;
+    scanned = 0;
+    let idx: number;
+    while ((idx = buffer.indexOf(0x0a, scanned)) !== -1) {
+      yield {
+        offset: bufferStart + scanned,
+        length: idx - scanned,
+        text: buffer.subarray(scanned, idx).toString('utf8'),
+      };
+      scanned = idx + 1;
     }
-    if (scanned < buffer.length) {
-      const rest = buffer.subarray(scanned);
-      if (opts.requireCompleteLastLine !== true) {
-        yield { offset: bufferStart + scanned, length: rest.length, text: rest.toString('utf8') };
-      }
+  }
+  if (scanned < buffer.length) {
+    const rest = buffer.subarray(scanned);
+    if (opts.requireCompleteLastLine !== true) {
+      yield { offset: bufferStart + scanned, length: rest.length, text: rest.toString('utf8') };
     }
-  } finally {
-    await handle.close();
   }
 }
 
@@ -61,6 +156,7 @@ export async function readSlice(
   position: number,
   bytes: number,
 ): Promise<string> {
+  if (isZstdPath(filePath)) return (await readZstdRange(filePath, position, bytes)).toString('utf8');
   const handle = await open(filePath, 'r');
   try {
     const buf = Buffer.alloc(Math.max(0, bytes));
@@ -92,8 +188,13 @@ export async function readTailLines(
   filePath: string,
   bytes: number,
 ): Promise<{ lines: unknown[]; lastTimestamp?: string }> {
-  const size = (await stat(filePath)).size;
-  const raw = await readSlice(filePath, Math.max(0, size - bytes), bytes);
+  let raw: string;
+  if (isZstdPath(filePath)) {
+    raw = (await readZstdTail(filePath, bytes)).toString('utf8');
+  } else {
+    const size = (await stat(filePath)).size;
+    raw = await readSlice(filePath, Math.max(0, size - bytes), bytes);
+  }
   const lines: unknown[] = [];
   let lastTimestamp: string | undefined;
   const parts = raw.split('\n');
