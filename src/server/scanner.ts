@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import type { DiscoveredSession, SessionSummary, TraceProvider } from '../core/schema.js';
 import { summarizeTraceFile } from '../core/run-builder.js';
+import { isZstdPath, ZSTD_SUPPORTED } from '../core/reader.js';
 
 /** Persisted per-file summary cache to keep library scans cheap. */
 interface CacheFile {
@@ -124,6 +125,7 @@ export class Library {
     for (const dir of this.dirs.extraDirs) {
       await collectJsonl(dir, files, 4);
     }
+    dropShadowedZst(files);
 
     const summaries: SessionSummary[] = [];
     const CONCURRENCY = 16;
@@ -184,10 +186,13 @@ export class Library {
     const st = await stat(inputPath);
     if (st.isDirectory()) {
       await collectJsonl(inputPath, files, 5);
-    } else if (inputPath.endsWith('.jsonl') || inputPath.endsWith('.ndjson') || inputPath.endsWith('.json')) {
+      dropShadowedZst(files);
+    } else if (isLineTraceName(path.basename(inputPath)) || inputPath.endsWith('.json')) {
       files.add(inputPath);
     } else {
-      throw new Error('Unsupported file type — expected .jsonl / .ndjson / .json');
+      throw new Error(
+        `Unsupported file type — expected .jsonl / .ndjson / .json${ZSTD_SUPPORTED ? ' / .jsonl.zst' : ''}`,
+      );
     }
     if (files.size === 0) throw new Error('No trace files found in that path');
     const out: SessionSummary[] = [];
@@ -221,9 +226,22 @@ async function collectJsonl(dir: string, out: Set<string>, maxDepth: number, dep
     if (entry.isDirectory()) {
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
       await collectJsonl(p, out, maxDepth, depth + 1);
-    } else if (entry.name.endsWith('.jsonl') || entry.name.endsWith('.ndjson')) {
+    } else if (isLineTraceName(entry.name)) {
       out.add(p);
     }
+  }
+}
+
+/** `.jsonl` / `.ndjson`, plus their zstd-compressed form (Codex compresses old rollouts in place). */
+function isLineTraceName(name: string): boolean {
+  if (name.endsWith('.jsonl') || name.endsWith('.ndjson')) return true;
+  return ZSTD_SUPPORTED && (name.endsWith('.jsonl.zst') || name.endsWith('.ndjson.zst'));
+}
+
+/** Mid-compression both `x.jsonl` and `x.jsonl.zst` exist; keep the plain file. */
+function dropShadowedZst(files: Set<string>): void {
+  for (const file of files) {
+    if (isZstdPath(file) && files.has(file.slice(0, -'.zst'.length))) files.delete(file);
   }
 }
 

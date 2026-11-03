@@ -4,6 +4,13 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.13] — 2026-11-03
+
+### Fixed
+- **Codex 压缩归档不可见**：Codex 会把已结束的 rollout 原地压缩成 `.jsonl.zst`，扫描只认 `.jsonl` / `.ndjson`，导致大部分历史 codex 会话从库里消失（本机 754 个）。现在透明解压读取，run id 不随压缩变化；压缩过程中两个文件同时存在时只保留明文版本。
+
+[详情 →](docs/releases/v0.0.13.md)
+
 ## [0.0.12] — 2026-10-12
 
 ### Changed
