@@ -1,6 +1,7 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { SearchMatch } from '../api.js';
 import { fmtTime } from '../format.js';
+import { Highlight } from '../highlight.js';
 import { IconSearch } from './Icons.js';
 
 export interface FilterState {
@@ -31,7 +32,9 @@ export function FilterBar({
   search,
   onSearch,
   matches,
-  onJump,
+  matchIndex,
+  onStepMatch,
+  onSelectMatch,
   searching,
   total,
   shown,
@@ -41,11 +44,74 @@ export function FilterBar({
   search: string;
   onSearch: (q: string) => void;
   matches: SearchMatch[];
-  onJump: (eventId: string) => void;
+  matchIndex: number;
+  onStepMatch: (delta: number) => void;
+  /** Jump to an exact match (popover click) — sets the active index too. */
+  onSelectMatch: (index: number) => void;
   searching: boolean;
   total: number;
   shown: number;
 }): JSX.Element {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeId = matchIndex >= 0 && matchIndex < matches.length ? matches[matchIndex].eventId : null;
+
+  // ⌘F / Ctrl+F focuses the search box (unless something editable is focused).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        const el = document.activeElement;
+        const editable = el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+        e.preventDefault();
+        if (!editable) inputRef.current?.focus();
+        else inputRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Keep the active match visible inside the popover list.
+  useEffect(() => {
+    const el = listRef.current?.querySelector('.search-result.active');
+    // jsdom (tests) does not implement scrollIntoView.
+    if (el instanceof HTMLElement && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' });
+  }, [activeId]);
+
+  const onInputKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      if (search) onSearch('');
+      else inputRef.current?.blur();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onStepMatch(e.shiftKey ? -1 : 1);
+      return;
+    }
+    if (e.key === 'ArrowDown' && matches.length > 0) {
+      e.preventDefault();
+      onStepMatch(1);
+    }
+  };
+
+  // The popover is anchored to focus: typing keeps it open, leaving the field
+  // dismisses it. Blur fires before click on the result row — delay long
+  // enough for the pointer to land, cancel if focus comes back.
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const openPopover = () => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setPopoverOpen(true);
+  };
+  const scheduleClose = () => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    blurTimer.current = setTimeout(() => setPopoverOpen(false), 180);
+  };
+  useEffect(() => () => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+  }, []);
+
   return (
     <div className="filter-bar">
       <div className="filter-chips" role="toolbar" aria-label="Event filters">
@@ -76,29 +142,53 @@ export function FilterBar({
         <div className="search-box">
           <IconSearch size={13} className="field-icon" />
           <input
+            ref={inputRef}
             aria-label="Search events"
-            placeholder="Search events, tools, commands, paths…"
+            placeholder="Search events, tools, commands, paths… (⌘F)"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
+            onKeyDown={onInputKey}
+            onFocus={openPopover}
+            onBlur={scheduleClose}
           />
           {searching && <span className="search-spinner" />}
-          {search && (
-            <div className="search-results">
+          {search && !searching && matches.length > 0 && (
+            <span className="search-nav" aria-label={`Match ${matchIndex + 1} of ${matches.length}`}>
+              <button className="search-nav-btn" title="Previous match (Shift+Enter)" aria-label="Previous match" onClick={() => onStepMatch(-1)}>
+                ‹
+              </button>
+              <span className="search-nav-count">
+                {matchIndex + 1}/{matches.length}
+              </span>
+              <button className="search-nav-btn" title="Next match (Enter)" aria-label="Next match" onClick={() => onStepMatch(1)}>
+                ›
+              </button>
+            </span>
+          )}
+          {search && popoverOpen && (
+            <div className="search-results" onMouseDown={openPopover}>
               <div className="search-results-header">
                 {matches.length} match{matches.length === 1 ? '' : 'es'}
+                {matches.length > 50 && <span className="search-results-more"> · showing first 50</span>}
               </div>
-              <div className="search-results-list">
-                {matches.slice(0, 50).map((m) => (
-                  <button key={m.eventId} className="search-result" onClick={() => onJump(m.eventId)}>
+              <div className="search-results-list" ref={listRef}>
+                {matches.slice(0, 50).map((m, i) => (
+                  <button
+                    key={m.eventId}
+                    className={`search-result ${matchIndex === i ? 'active' : ''}`}
+                    onClick={() => onSelectMatch(i)}
+                  >
                     <span className={`kind-dot kind-${m.kind}`} />
                     <span className="search-result-meta">
                       {m.kind === 'tool_call' || m.kind === 'tool_result' ? m.toolName : m.kind.replace('_message', '').replace('_', ' ')}
                     </span>
-                    <span className="search-result-snippet">{m.snippet}</span>
+                    <span className="search-result-snippet">
+                      <Highlight text={m.snippet} query={search} />
+                    </span>
                     {m.timestamp && <span className="search-result-time">{fmtTime(m.timestamp)}</span>}
                   </button>
                 ))}
-                {matches.length === 0 && <div className="search-empty">No matches.</div>}
+                {matches.length === 0 && !searching && <div className="search-empty">No matches.</div>}
               </div>
             </div>
           )}

@@ -234,3 +234,95 @@ button:hover .chev {
   font-size: var(--fs-mono-sm);
   color: var(--text-2);
 }
+
+/* ─── Search match visibility ──────────────────────────────────────────
+   Text hits are underlined in amber (works inside markdown, tool output
+   and dim grey text alike); matched rows get an amber edge in the time
+   gutter so hits stay findable while scrolling. The query is the focus:
+   the mark must read on any background without repainting the row. */
+
+mark.search-hl {
+  background: transparent;
+  color: var(--tool);
+  text-decoration: underline;
+  text-decoration-color: var(--tool);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+/* Marks inside already-colored text (stderr, dim rows) keep the underline
+   but inherit readable color. */
+.tool-output.err mark.search-hl {
+  color: inherit;
+  font-weight: 700;
+}
+.patch-line.add mark.search-hl {
+  color: var(--edit);
+  text-decoration-color: var(--edit);
+}
+.patch-line.del mark.search-hl {
+  color: var(--error);
+  text-decoration-color: var(--error);
+}
+
+.row.has-match .time-gutter {
+  color: var(--tool);
+}
+.row.has-match::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--tool);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.row.active-match {
+  background: rgba(208, 163, 92, 0.08);
+}
+.row.active-match::after {
+  opacity: 1;
+}
+.row.active-match .time-gutter {
+  color: var(--tool);
+}
+/* Selection wins over match states. */
+.row.selected.has-match::after,
+.row.selected.active-match::after {
+  display: none;
+}
+
+/* Aggregate rows: match count badge in the gutter */
+.match-mark {
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: 2px 0 0 8px;
+  border-radius: 50%;
+  background: var(--tool);
+  opacity: 0.85;
+}
+.aggregate-row.has-match > .aggregate-head .aggregate-count {
+  color: var(--tool);
+}
+.aggregate-row.active-match > .aggregate-head {
+  background: rgba(208, 163, 92, 0.08);
+}
+/* The gutter badge variant with icon + count (aggregate rows). */
+.row-gutter .match-mark[title] {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: auto;
+  height: 14px;
+  margin: 2px 0 0 2px;
+  background: var(--tool-tint);
+  border-radius: var(--r-xs);
+  padding: 0 3px;
+  color: var(--tool);
+  font-size: 10px;
+  font-family: var(--mono);
+  opacity: 1;
+}

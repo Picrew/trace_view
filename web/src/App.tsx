@@ -29,6 +29,7 @@ export function App(): JSX.Element {
   const [filters, setFilters] = useState<FilterState>({ active: new Set() });
   const [search, setSearch] = useState('');
   const [matches, setMatches] = useState<SearchMatch[]>([]);
+  const [matchIndex, setMatchIndex] = useState(-1);
   const [searching, setSearching] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
@@ -66,6 +67,7 @@ export function App(): JSX.Element {
     setFilters({ active: new Set() });
     setSearch('');
     setMatches([]);
+    setMatchIndex(-1);
     try {
       const detail = await api.run(runId);
       if (token !== loadRunRef.current) return;
@@ -154,6 +156,7 @@ export function App(): JSX.Element {
   useEffect(() => {
     if (!selectedId || !search.trim()) {
       setMatches([]);
+      setMatchIndex(-1);
       setSearching(false);
       return;
     }
@@ -161,12 +164,61 @@ export function App(): JSX.Element {
     const t = setTimeout(() => {
       api
         .search(selectedId, search.trim())
-        .then((r) => setMatches(r.matches))
-        .catch(() => setMatches([]))
+        .then((r) => {
+          setMatches(r.matches);
+          // Land on the first match so the user immediately sees WHERE the
+          // hit is (trajectory row mark + timeline outline), not just a list.
+          // The jump also scrolls the trajectory so the row is on screen —
+          // matches outside the virtualized viewport would otherwise be
+          // invisible no matter how we mark them.
+          if (r.matches.length > 0) {
+            setMatchIndex(0);
+            setSelectedEventId(r.matches[0].eventId);
+            setAutoScrollSeq((n) => n + 1);
+          } else {
+            setMatchIndex(-1);
+          }
+        })
+        .catch(() => {
+          setMatches([]);
+          setMatchIndex(-1);
+        })
         .finally(() => setSearching(false));
     }, 250);
     return () => clearTimeout(t);
   }, [search, selectedId]);
+
+  const matchEventIds = useMemo(() => new Set(matches.map((m) => m.eventId)), [matches]);
+  const activeMatch = matchIndex >= 0 && matchIndex < matches.length ? matches[matchIndex] : null;
+
+  // Stepping to a match scrolls the trajectory to its row; unlike a click it
+  // must NOT force the inspector open — the user is scanning hits, not
+  // inspecting one.
+  const jumpToMatch = useCallback((eventId: string) => {
+    setSelectedEventId(eventId);
+    setAutoScrollSeq((n) => n + 1);
+  }, []);
+
+  const stepMatch = useCallback(
+    (delta: number) => {
+      if (matches.length === 0) return;
+      setMatchIndex((i) => {
+        const next = (i + delta + matches.length) % matches.length;
+        jumpToMatch(matches[next].eventId);
+        return next;
+      });
+    },
+    [matches, jumpToMatch],
+  );
+
+  const selectMatch = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= matches.length) return;
+      setMatchIndex(index);
+      jumpToMatch(matches[index].eventId);
+    },
+    [matches, jumpToMatch],
+  );
 
   // --- filtering ---
   const filteredEvents = useMemo(() => {
@@ -325,14 +377,16 @@ export function App(): JSX.Element {
               onShowFiles={() => setFilesOpen(!filesOpen)}
               filesOpen={filesOpen}
             />
-            <Timeline spans={spans} onSelect={jumpToEvent} />
+            <Timeline spans={spans} onSelect={jumpToEvent} matchEventIds={matchEventIds} activeMatchId={activeMatch?.eventId ?? null} />
             <FilterBar
               filters={filters}
               onToggle={onToggleFilter}
               search={search}
               onSearch={setSearch}
               matches={matches}
-              onJump={jumpToEvent}
+              matchIndex={matchIndex}
+              onStepMatch={stepMatch}
+              onSelectMatch={selectMatch}
               searching={searching}
               total={events.length}
               shown={patchedEvents.length}
@@ -343,6 +397,9 @@ export function App(): JSX.Element {
               onSelect={onSelectEvent}
               autoScrollSeq={autoScrollSeq}
               live={run.live}
+              searchQuery={search.trim()}
+              matchEventIds={matchEventIds}
+              activeMatchId={activeMatch?.eventId ?? null}
             />
           </>
         )}
