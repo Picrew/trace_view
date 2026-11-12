@@ -4,6 +4,17 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.14] — 2026-11-12
+
+### Changed
+- **搜索命中直接可见**：命中的文字在消息正文、reasoning、tool 输出、diff、路径里高亮；命中的行加琥珀标注；Timeline 上命中 span 描边、当前匹配实心。搜索结果回来时自动跳到第一个命中并滚动到屏幕中央。
+
+### Added
+- 搜索键盘导航：`⌘F` 聚焦、`Enter`/`Shift+Enter` 步进、`Esc` 清空，`n/N` 计数器与 ‹ › 按钮。
+- reasoning 命中时自动展开；搜索弹层改为聚焦时展开、失焦收起。
+
+[详情 →](docs/releases/v0.0.14.md)
+
 ## [0.0.13] — 2026-11-03
 
 ### Fixed

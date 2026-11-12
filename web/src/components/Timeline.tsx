@@ -30,6 +30,8 @@ const C = {
   axis: '#5d6571',
   hairline: 'rgba(255,255,255,0.045)',
   grid: 'rgba(255,255,255,0.035)',
+  // Search match outline — the tool amber, brighter, per styles/tokens.css.
+  match: '#f0c685',
 };
 export function trackColor(track: string): string {
   if (track === 'model') return C.model;
@@ -59,7 +61,17 @@ interface Hover {
   span: TimelineSpan;
 }
 
-export function Timeline({ spans, onSelect }: { spans: TimelineSpan[]; onSelect: (eventId: string) => void }): JSX.Element {
+export function Timeline({
+  spans,
+  onSelect,
+  matchEventIds,
+  activeMatchId,
+}: {
+  spans: TimelineSpan[];
+  onSelect: (eventId: string) => void;
+  matchEventIds: ReadonlySet<string>;
+  activeMatchId: string | null;
+}): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<{ start: number; span: number } | null>(null); // ms domain
@@ -183,6 +195,8 @@ export function Timeline({ spans, onSelect }: { spans: TimelineSpan[]; onSelect:
       // 1px breathing room between back-to-back spans once they're wide enough.
       const w = raw > 3 ? raw - 1 : raw;
       const hovered = hover?.span.id === s.id;
+      const isMatch = matchEventIds.size > 0 && matchEventIds.has(s.eventId);
+      const isActiveMatch = activeMatchId !== null && s.eventId === activeMatchId;
       if (s.spanKind === 'request') {
         // Model calls: a faint band with a crisp start tick, not a solid bar.
         const color = s.isError ? C.error : C.model;
@@ -198,10 +212,26 @@ export function Timeline({ spans, onSelect }: { spans: TimelineSpan[]; onSelect:
         roundRect(ctx, x1, y + 3, w, TRACK_H - 6, 2);
         ctx.fill();
       }
+      // Search matches: a bright amber outline over the span, so hits are
+      // visible on the timeline itself; the active match gets a filled band.
+      if (isMatch) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = C.match;
+        ctx.lineWidth = isActiveMatch ? 2 : 1;
+        const my = s.spanKind === 'request' ? y + 1 : y + 3;
+        const mh = s.spanKind === 'request' ? TRACK_H - 2 : TRACK_H - 6;
+        roundRect(ctx, x1, my, w, mh, 2);
+        ctx.stroke();
+        if (isActiveMatch) {
+          ctx.globalAlpha = 0.28;
+          ctx.fillStyle = C.match;
+          ctx.fill();
+        }
+      }
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-  }, [ordered, tracks, size, v, domain, xOf, totalH, pxPerMs, hover]);
+  }, [ordered, tracks, size, v, domain, xOf, totalH, pxPerMs, hover, matchEventIds, activeMatchId]);
 
   const findSpanAt = useCallback(
     (clientX: number): TimelineSpan | null => {

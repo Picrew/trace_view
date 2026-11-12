@@ -10,7 +10,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseTraceFile } from '../src/core/run-builder.js';
-import { stripForTransport } from '../src/server/api.js';
+import { stripForTransport, searchEvents } from '../src/server/api.js';
 
 // React 18 act() requires this flag outside of jest.
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -102,7 +102,8 @@ function installFetchMock() {
       return json({ event: event ? stripForTransport(event) : null, raw: { type: 'user', probe: true } });
     }
     if (u.includes('/search?')) {
-      return json({ query: '', matches: [] });
+      const q = decodeURIComponent(new URL(`http://x${u}`).searchParams.get('q') ?? '');
+      return json({ query: q, matches: searchEvents(handle.parsed.events, q) });
     }
     return json({ error: 'not found' }, 404);
   };
@@ -229,5 +230,60 @@ describe('web UI (jsdom render)', () => {
     const md = container.querySelector('.message-text .md')!;
     expect(md.innerHTML).not.toContain('<script');
     expect(md.querySelector('script')).toBeNull();
+  });
+
+  it('shows search hits: popover highlights, count, stepping, escape clears', async () => {
+    const input = container.querySelector<HTMLInputElement>('.search-box input')!;
+    // "login" occurs in the user message AND assistant text of the fixture.
+    await act(async () => {
+      // The popover is focus-anchored — start focused.
+      input.focus();
+      // React 18 controlled input: set value + dispatch input event.
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(input, 'login');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    // Debounced search fires; matches arrive and popover marks render.
+    // (Row-level marks depend on the virtualized viewport, which jsdom cannot
+    // measure — real-browser coverage is the visual snapshot 06-search.)
+    await waitFor(() => container.querySelectorAll('.search-result').length > 0);
+    const marks = container.querySelectorAll('mark.search-hl');
+    expect(marks.length).toBeGreaterThan(0);
+    for (const m of marks) expect(m.textContent!.toLowerCase()).toContain('login');
+    // n/N counter reflects the first match being active.
+    const count = container.querySelector('.search-nav-count')!;
+    expect(count.textContent).toMatch(/^1\/\d+$/);
+    // Result popover lists matches with the query highlighted inside snippets.
+    const results = container.querySelectorAll('.search-result');
+    expect(results.length).toBeGreaterThan(0);
+    expect(container.querySelector('.search-result.active')).toBeTruthy();
+    expect(container.querySelector('.search-result-snippet mark.search-hl')).toBeTruthy();
+
+    // Enter steps to the next match and updates the counter.
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    await waitFor(() => {
+      const c = container.querySelector('.search-nav-count');
+      return c !== null && c.textContent !== null && !/^1\//.test(c.textContent);
+    });
+
+    // Escape clears the query and all match UI.
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    await waitFor(() => container.querySelectorAll('mark.search-hl').length === 0);
+    expect(container.querySelector('.search-results')).toBeNull();
+    expect(container.querySelector('.search-nav-count')).toBeNull();
+  });
+
+  it('highlight util: literal, case-insensitive, every occurrence, regex chars safe', async () => {
+    const { splitHighlight } = await import('../web/src/highlight.js');
+    const parts = splitHighlight('aXa Xa x', 'x');
+    expect(parts.filter((p) => p.hit).map((p) => p.s)).toEqual(['X', 'X', 'x']);
+    // Regex metacharacters in the query are treated literally.
+    const dots = splitHighlight('a.b axb', '.');
+    expect(dots.filter((p) => p.hit).map((p) => p.s)).toEqual(['.']);
+    expect(splitHighlight('plain', 'zzz')).toEqual([{ s: 'plain', hit: false }]);
   });
 });
