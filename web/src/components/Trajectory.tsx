@@ -4,7 +4,7 @@ import type { FileChangeEvent, StructuredPatch, TraceEvent } from '../types.js';
 import type { Row, ToolPair } from '../rows.js';
 import { buildRows } from '../rows.js';
 import { fmtDuration, fmtTime } from '../format.js';
-import { Highlight } from '../highlight.js';
+import { Highlight, splitHighlight } from '../highlight.js';
 import { SafeMarkdown } from './SafeMarkdown.js';
 import { JsonView } from './JsonView.js';
 import { IconAlert, IconArrowDown, IconCheck, IconChevron, IconCompact, IconImage, IconInfo, IconSearch, IconUnknown } from './Icons.js';
@@ -356,9 +356,26 @@ function ReasoningRow({
   matched: boolean;
 }): JSX.Element {
   const long = e.text.length > 200;
-  const text = open || !long ? e.text : `${e.text.slice(0, 200)}…`;
-  // A match hidden inside a collapsed reasoning row still gets found: open it.
-  const showText = searchQuery.trim() && matched ? true : open || !long;
+  // A match hidden inside a collapsed reasoning row still gets found: show
+  // text when matched, and slide the 200-char preview window to the first
+  // hit so the highlight is actually inside what we render.
+  const q = searchQuery.trim();
+  let text: string;
+  let showText: boolean;
+  if (q && matched) {
+    const hit = splitHighlight(e.text, q).find((p) => p.hit);
+    if (hit) {
+      const at = e.text.indexOf(hit.s);
+      const start = long ? Math.max(0, at - 60) : 0;
+      text = (start > 0 ? '…' : '') + e.text.slice(start, start + 260) + (start + 260 < e.text.length ? '…' : '');
+    } else {
+      text = e.text;
+    }
+    showText = true;
+  } else {
+    text = open || !long ? e.text : `${e.text.slice(0, 200)}…`;
+    showText = open || !long;
+  }
   return (
     <div className={`row reasoning-row ${selected ? 'selected' : ''} ${matched && !selected ? 'has-match' : ''}`} onClick={() => onSelect(e.id)}>
       <div className="row-gutter">

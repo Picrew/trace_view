@@ -43,6 +43,9 @@ export interface SearchMatch {
 export function searchEvents(events: TraceEvent[], query: string, limit = 200): SearchMatch[] {
   const q = query.toLowerCase();
   if (!q) return [];
+  // Fallback haystack for words broken across lines: markdown soft-wraps
+  // text with \n where the query has a space ("foo\nbar" should match "foo bar").
+  const qNorm = q.replace(/\s+/g, ' ');
   const matches: SearchMatch[] = [];
   for (const e of events) {
     let haystack = '';
@@ -77,7 +80,16 @@ export function searchEvents(events: TraceEvent[], query: string, limit = 200): 
       default:
         haystack = `${(e as any).rawType ?? ''} ${(e as any).note ?? ''}`;
     }
-    const idx = haystack.toLowerCase().indexOf(q);
+    const lower = haystack.toLowerCase();
+    let idx = lower.indexOf(q);
+    if (idx === -1 && /\s/.test(q)) {
+      // Normalized pass (collapsed whitespace): words wrapped across lines
+      // in the source match a query with spaces. Snippet offsets are
+      // computed on the normalized text; that is fine — it is display-only.
+      const norm = lower.replace(/\s+/g, ' ');
+      idx = norm.indexOf(qNorm);
+      if (idx !== -1) haystack = norm;
+    }
     if (idx === -1) continue;
     matches.push({
       eventId: e.id,
