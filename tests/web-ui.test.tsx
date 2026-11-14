@@ -243,19 +243,25 @@ describe('web UI (jsdom render)', () => {
       setter.call(input, 'login');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    // Debounced search fires; matches arrive and popover marks render.
-    // (Row-level marks depend on the virtualized viewport, which jsdom cannot
-    // measure — real-browser coverage is the visual snapshot 06-search.)
-    await waitFor(() => container.querySelectorAll('.search-result').length > 0);
-    const marks = container.querySelectorAll('mark.search-hl');
-    expect(marks.length).toBeGreaterThan(0);
-    for (const m of marks) expect(m.textContent!.toLowerCase()).toContain('login');
+    // Debounced search fires; matches arrive and the counter renders. The
+    // popover collapses when results land (the trajectory takes over), so
+    // assert the popover via a re-focus instead of its transient open state.
+    await waitFor(() => container.querySelector('.search-nav-count') !== null);
     // n/N counter reflects the first match being active.
     const count = container.querySelector('.search-nav-count')!;
     expect(count.textContent).toMatch(/^1\/\d+$/);
-    // Result popover lists matches with the query highlighted inside snippets.
+    // Re-focusing the input re-opens the result popover with highlighted snippets.
+    await act(async () => {
+      input.blur();
+      input.focus();
+    });
+    await waitFor(() => container.querySelectorAll('.search-result').length > 0);
     const results = container.querySelectorAll('.search-result');
     expect(results.length).toBeGreaterThan(0);
+    // Snippets carry the highlighted query.
+    const marks = container.querySelectorAll('mark.search-hl');
+    expect(marks.length).toBeGreaterThan(0);
+    for (const m of marks) expect(m.textContent!.toLowerCase()).toContain('login');
     expect(container.querySelector('.search-result.active')).toBeTruthy();
     expect(container.querySelector('.search-result-snippet mark.search-hl')).toBeTruthy();
 
@@ -285,5 +291,36 @@ describe('web UI (jsdom render)', () => {
     const dots = splitHighlight('a.b axb', '.');
     expect(dots.filter((p) => p.hit).map((p) => p.s)).toEqual(['.']);
     expect(splitHighlight('plain', 'zzz')).toEqual([{ s: 'plain', hit: false }]);
+  });
+
+  it('server search: words wrapped across lines still match; markdown links stay intact', async () => {
+    const evts = handle.parsed.events;
+    // Exact-phrase search still works (single haystack pass).
+    expect(searchEvents(evts, 'login bug').length).toBeGreaterThan(0);
+    // A query with a space matches text where the words are split by a newline.
+    const synthetic: any = {
+      id: 'test-wrap',
+      seq: 99999,
+      kind: 'user_message',
+      timestamp: '2026-09-20T10:00:00.000Z',
+      text: 'please fix\nthe login flow today',
+    };
+    const wrapped = searchEvents([synthetic, ...evts], 'fix the login');
+    expect(wrapped.some((m) => m.eventId === 'test-wrap')).toBe(true);
+    // Multi-space queries collapse too.
+    const wrapped2 = searchEvents([synthetic, ...evts], 'fix   the login');
+    expect(wrapped2.some((m) => m.eventId === 'test-wrap')).toBe(true);
+
+    // SafeMarkdown: fenced blocks get marks; URLs inside links stay intact.
+    const { renderMarkdown } = await import('../web/src/components/SafeMarkdown.js');
+    const fenced = renderMarkdown('```\nconst x = login;\n```', 'login');
+    expect(fenced).toContain('code-block');
+    expect(fenced).toContain('<mark class="search-hl">login</mark>');
+    const link = renderMarkdown('see [docs](https://x.com/login) ok', 'login');
+    expect(link).toContain('href="https://x.com/login"'); // href unbroken
+    expect(link).not.toContain('href="https://x.com/"'); // not truncated
+    expect(link.match(/<a [^>]*>/g)).toHaveLength(1); // single clean anchor
+    const linkText = renderMarkdown('see [login docs](https://x.com/a) ok', 'login');
+    expect(linkText).toContain('><mark class="search-hl">login</mark> docs</a>'); // link text highlighted
   });
 });

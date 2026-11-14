@@ -86,12 +86,15 @@ export function FilterBar({
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      onStepMatch(e.shiftKey ? -1 : 1);
+      stepAndCollapse(e.shiftKey ? -1 : 1);
       return;
     }
     if (e.key === 'ArrowDown' && matches.length > 0) {
       e.preventDefault();
-      onStepMatch(1);
+      // Collapsed by auto-dismiss: ↓ re-opens the candidate list. While
+      // open it steps to the next match.
+      if (!popoverOpen) openPopover();
+      else stepAndCollapse(1);
     }
   };
 
@@ -104,6 +107,10 @@ export function FilterBar({
     if (blurTimer.current) clearTimeout(blurTimer.current);
     setPopoverOpen(true);
   };
+  const closePopover = () => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setPopoverOpen(false);
+  };
   const scheduleClose = () => {
     if (blurTimer.current) clearTimeout(blurTimer.current);
     blurTimer.current = setTimeout(() => setPopoverOpen(false), 180);
@@ -111,6 +118,25 @@ export function FilterBar({
   useEffect(() => () => {
     if (blurTimer.current) clearTimeout(blurTimer.current);
   }, []);
+
+  // Results landed for the query the user just typed: the interesting thing
+  // is now the highlighted row in the trajectory, not the candidate list —
+  // collapse the popover (it would sit right on top of the scrolled-to row).
+  const wasSearching = useRef(false);
+  useEffect(() => {
+    if (wasSearching.current && !searching && document.activeElement === inputRef.current) {
+      closePopover();
+    }
+    wasSearching.current = searching;
+  }, [searching]);
+
+  // Stepping through matches moves the action to the trajectory — the
+  // popover only blocks the view there, so it collapses and stays down
+  // until the user types again.
+  const stepAndCollapse = (delta: number) => {
+    closePopover();
+    onStepMatch(delta);
+  };
 
   return (
     <div className="filter-bar">
@@ -154,13 +180,13 @@ export function FilterBar({
           {searching && <span className="search-spinner" />}
           {search && !searching && matches.length > 0 && (
             <span className="search-nav" aria-label={`Match ${matchIndex + 1} of ${matches.length}`}>
-              <button className="search-nav-btn" title="Previous match (Shift+Enter)" aria-label="Previous match" onClick={() => onStepMatch(-1)}>
+              <button className="search-nav-btn" title="Previous match (Shift+Enter)" aria-label="Previous match" onClick={() => stepAndCollapse(-1)}>
                 ‹
               </button>
               <span className="search-nav-count">
                 {matchIndex + 1}/{matches.length}
               </span>
-              <button className="search-nav-btn" title="Next match (Enter)" aria-label="Next match" onClick={() => onStepMatch(1)}>
+              <button className="search-nav-btn" title="Next match (Enter)" aria-label="Next match" onClick={() => stepAndCollapse(1)}>
                 ›
               </button>
             </span>
