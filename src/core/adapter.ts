@@ -26,6 +26,13 @@ export interface ParserMeta {
   skippedTypes: Record<string, number>;
   /** Extra notes shown in the UI (e.g. collaboration mode). */
   notes: string[];
+  /** Session cost in USD, latest value (Claude Code cost-state). */
+  costUSD?: number;
+  /** Lines added/removed per cost-state (Claude Code). */
+  linesAdded?: number;
+  linesRemoved?: number;
+  /** PRs created/opened during the session (Claude Code pr-link). */
+  prLinks: { label: string; url: string }[];
 }
 
 export interface ParserStateBase {
@@ -64,6 +71,7 @@ export function newParserMeta(): ParserMeta {
     badLines: 0,
     skippedTypes: {},
     notes: [],
+    prLinks: [],
   };
 }
 

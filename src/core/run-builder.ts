@@ -331,6 +331,10 @@ export function buildDerived(input: {
     parserVersion: PARSER_VERSION,
     warnings,
     notes: meta.notes.length > 0 ? [...meta.notes] : undefined,
+    costUSD: meta.costUSD,
+    linesAdded: meta.linesAdded,
+    linesRemoved: meta.linesRemoved,
+    prLinks: meta.prLinks.length > 0 ? [...meta.prLinks] : undefined,
   };
 
   const fileChanges = [...fileChangeMap.values()].sort((a, b) => b.additions + b.deletions - (a.additions + a.deletions));

@@ -212,6 +212,26 @@ export interface TurnBoundaryEvent extends BaseEvent {
   kind: 'turn_boundary';
   requestIndex: number;
   model?: string;
+  /** Reasoning effort for this turn (codex turn_context.effort / claude api-request output_config.effort). */
+  effort?: string;
+  /** Approval policy for this turn (codex turn_context.approval_policy). */
+  approvalPolicy?: string;
+  /** Sandbox policy for this turn (codex turn_context.sandbox_policy.type). */
+  sandboxPolicy?: string;
+  /** Permission mode for this turn (claude permission-mode.permissionMode). */
+  permissionMode?: string;
+  /** Thinking config for this turn (claude api-request.params.thinking, e.g. "adaptive"). */
+  thinking?: string;
+  /** Max output tokens for this turn (claude api-request.params.max_tokens). */
+  maxTokens?: number;
+  /** Token usage of this turn, when the format provides per-turn accounting. */
+  usage?: TurnUsage;
+}
+
+/** Per-request token usage shown on boundary rows. */
+export interface TurnUsage {
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface UnknownEvent extends BaseEvent {
@@ -323,6 +343,13 @@ export interface TraceRun {
   warnings: string[];
   /** Context notes from the adapter (e.g. originator, subagent lineage). */
   notes?: string[];
+  /** Total session cost in USD, when the format reports it (Claude Code). */
+  costUSD?: number;
+  /** Lines added/removed across the session, when the format reports it. */
+  linesAdded?: number;
+  linesRemoved?: number;
+  /** PRs created/opened during the session (Claude Code pr-link). */
+  prLinks?: { label: string; url: string }[];
 }
 
 /** Lightweight listing record used by the Session Library. */

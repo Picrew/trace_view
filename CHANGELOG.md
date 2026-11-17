@@ -4,6 +4,17 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.17] — 2026-11-17
+
+### Added
+- **Turn 参数可见**：每个 Request 分隔行现在带 turn 级参数——
+  - **Codex**：`effort` / `approval_policy` / `sandbox_policy`（如 `xhigh · never · danger-full-access`），来自 `turn_context`；每个 turn 的 token 用量（`↑in ↓out`，来自 `token_count.last_token_usage`）。
+  - **Claude Code**：`effort` / `thinking` / `max_tokens`（来自 `api-request` 参数）与 `permission-mode`（如 `xhigh · bypassPermissions · thinking:adaptive`）。
+- **Session 级信息进 header**：总花费 `$`、行数 `+/−`（`cost-state`）；session 里创建的 **PR 链接**（`pr-link`，可点击）；subagent 名（`agent-name`）。
+- **噪音清理**：`api-request` / `api-request-blob` / `api-request-shape` / `tools-used` / `file-history-*` / `permission-mode` 等簿记行不再作为 unknown 事件刷屏（实测一个 CC session 从 220 条 unknown 降到 0），权限模式转由 boundary 行承载。
+
+[详情 →](docs/releases/v0.0.17.md)
+
 ## [0.0.16] — 2026-11-17
 
 ### Fixed

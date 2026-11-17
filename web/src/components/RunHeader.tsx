@@ -39,6 +39,26 @@ export function RunHeader({
             </span>
           ))}
           {run.models.length > 0 && <span className="run-models">{run.models.join(' · ')}</span>}
+          {run.costUSD !== undefined && (
+            <span className="run-cost" title="Session cost (cost-state)">${run.costUSD.toFixed(2)}</span>
+          )}
+          {run.linesAdded !== undefined && run.linesRemoved !== undefined && (
+            <span className="run-lines" title="Lines added / removed (cost-state)">
+              +{run.linesAdded} −{run.linesRemoved}
+            </span>
+          )}
+          {run.prLinks?.map((pr) => (
+            <a
+              key={pr.url}
+              className="run-pr"
+              href={pr.url}
+              target="_blank"
+              rel="noreferrer"
+              title={pr.url}
+            >
+              {pr.label}
+            </a>
+          ))}
           <span className="run-range">
             {fmtDateTime(run.startedAt)} → {runDateTimeEnd(run)}
           </span>
