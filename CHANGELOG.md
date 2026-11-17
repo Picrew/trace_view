@@ -4,6 +4,16 @@ All notable changes to Trace Review. 每个版本的完整发布说明见 [`docs
 
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/);`0.0.x` 阶段属于早期开发,接口与存储格式可能变动。
 
+## [0.0.16] — 2026-11-17
+
+### Fixed
+- **Session 标题与官方 UI 一致**：之前列表标题取"第一条用户消息"，和 Claude Code / Codex 里看到的标题对不上。现在：
+  - **Claude Code**：读取 `ai-title` 行（v2.1.270+ CLI 自动生成、随对话刷新，取最新值）；用户手动改过的 `custom-title` 永远优先。大会话的标题行落在 head 512KB 之外时，用 tail 兜底再扫一次。
+  - **Codex**：rollout 文件里没有标题——官方标题存在 `~/.codex/session_index.jsonl`（`thread_name`），现在按 sessionId 关联读取（含 mtime 缓存；索引变化时自动失效重扫）。归档会话不在索引里，仍回退首条用户消息。
+  - 详情页标题与列表保持同源（同一索引标题）。
+
+[详情 →](docs/releases/v0.0.16.md)
+
 ## [0.0.15] — 2026-11-13
 
 ### Fixed

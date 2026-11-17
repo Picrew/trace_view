@@ -8,7 +8,10 @@ import type {
 /** Metadata accumulated while parsing; becomes the TraceRun after finalize. */
 export interface ParserMeta {
   sessionId?: string;
+  /** Definitive title (user-set "custom-title" in Claude Code). */
   title?: string;
+  /** CLI-generated title (Claude Code "ai-title"); refreshed as the session grows. */
+  aiTitle?: string;
   project?: string;
   cwd?: string;
   gitRepo?: string;
