@@ -14,7 +14,7 @@
 export type TraceProvider = 'claude-code' | 'codex' | 'opencode' | 'pi' | 'generic';
 
 /** Bump when parser output semantics change in a way consumers must know about. */
-export const PARSER_VERSION = 1;
+export const PARSER_VERSION = 2;
 
 export type ToolCategory =
   | 'bash'

@@ -2,6 +2,7 @@ import { readdir, stat, mkdir, writeFile, rename, readFile } from 'node:fs/promi
 import path from 'node:path';
 import os from 'node:os';
 import type { DiscoveredSession, SessionSummary, TraceProvider } from '../core/schema.js';
+import { PARSER_VERSION } from '../core/schema.js';
 import { summarizeTraceFile } from '../core/run-builder.js';
 import { isZstdPath, ZSTD_SUPPORTED } from '../core/reader.js';
 import { CodexTitleIndex } from './codex-index.js';
@@ -9,6 +10,8 @@ import { CodexTitleIndex } from './codex-index.js';
 /** Persisted per-file summary cache to keep library scans cheap. */
 interface CacheFile {
   version: 1;
+  /** Parser version the entries were written with — a bump invalidates all of them. */
+  parserVersion?: number;
   entries: Record<string, { size: number; mtimeMs: number; summary: SessionSummary }>;
 }
 
@@ -59,7 +62,12 @@ export class Library {
     try {
       const raw = await readFile(this.cachePath, 'utf8');
       const parsed = JSON.parse(raw) as CacheFile;
-      if (parsed.version === 1 && parsed.entries && typeof parsed.entries === 'object') {
+      if (
+        parsed.version === 1 &&
+        parsed.entries &&
+        typeof parsed.entries === 'object' &&
+        parsed.parserVersion === PARSER_VERSION // older parser → stale summaries
+      ) {
         this.cache = new Map(Object.entries(parsed.entries));
       }
     } catch {
@@ -73,6 +81,7 @@ export class Library {
       await mkdir(dir, { recursive: true });
       const payload: CacheFile = {
         version: 1,
+        parserVersion: PARSER_VERSION,
         entries: Object.fromEntries(this.cache),
       };
       const tmp = `${this.cachePath}.tmp`;
