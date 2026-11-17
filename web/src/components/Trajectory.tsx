@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileChangeEvent, StructuredPatch, TraceEvent } from '../types.js';
 import type { Row, ToolPair } from '../rows.js';
 import { buildRows } from '../rows.js';
-import { fmtDuration, fmtTime } from '../format.js';
+import { fmtDuration, fmtTime, fmtTokens } from '../format.js';
 import { Highlight, splitHighlight } from '../highlight.js';
 import { SafeMarkdown } from './SafeMarkdown.js';
 import { JsonView } from './JsonView.js';
@@ -398,12 +398,20 @@ function ReasoningRow({
 }
 
 function BoundaryRow({ e, onSelect }: { e: Extract<TraceEvent, { kind: 'turn_boundary' }>; onSelect: (id: string) => void }): JSX.Element {
+  const params: string[] = [];
+  if (e.effort) params.push(e.effort);
+  if (e.permissionMode) params.push(e.permissionMode);
+  else if (e.approvalPolicy) params.push(e.approvalPolicy);
+  if (e.sandboxPolicy) params.push(e.sandboxPolicy);
+  if (e.thinking) params.push(`thinking:${e.thinking}`);
   return (
     <div className="row boundary-row" onClick={() => onSelect(e.id)}>
       <span className="boundary-label">
         <span className="boundary-tag">Request {e.requestIndex + 1}</span>
         <span className="boundary-meta">
           {e.model ? ` · ${e.model}` : ''}
+          {params.length > 0 ? ` · ${params.join(' · ')}` : ''}
+          {e.usage !== undefined ? ` · ↑${fmtTokens(e.usage.inputTokens)} ↓${fmtTokens(e.usage.outputTokens)}` : ''}
           {e.durationMs !== undefined ? ` · ${fmtDuration(e.durationMs)}` : ''}
         </span>
       </span>

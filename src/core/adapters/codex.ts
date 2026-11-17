@@ -35,6 +35,10 @@ export interface CodexState extends ParserStateBase {
   firstUserTitle?: string;
   /** True once a v1+ turn_context line has been seen (v0 rollouts have none). */
   sawTurnContext: boolean;
+  /** requestIndex → token usage of that turn (from token_count.last_token_usage). */
+  turnUsage: Map<number, { inputTokens: number; outputTokens: number }>;
+  /** requestIndex → boundary event, patched in place when token_count arrives. */
+  boundaries: Map<number, TurnBoundaryEvent>;
 }
 
 /**
@@ -74,7 +78,15 @@ export class CodexAdapter implements TraceAdapter<CodexState> {
   }
 
   createState(): CodexState {
-    return { seq: 0, meta: newParserMeta(), requestIndex: -1, pendingCalls: new Map(), sawTurnContext: false };
+    return {
+      seq: 0,
+      meta: newParserMeta(),
+      requestIndex: -1,
+      pendingCalls: new Map(),
+      sawTurnContext: false,
+      turnUsage: new Map(),
+      boundaries: new Map(),
+    };
   }
 
   parseLine(line: unknown, loc: EventLoc, state: CodexState, ctx: ParseCtx): TraceEvent[] {
@@ -127,15 +139,24 @@ export class CodexAdapter implements TraceAdapter<CodexState> {
           if (!state.meta.notes.includes(note)) state.meta.notes.push(note);
         }
         state.meta.usage.modelRequests = state.requestIndex + 1;
-        events.push(
-          mkEvent({
-            kind: 'turn_boundary',
-            requestIndex: state.requestIndex,
-            model: state.currentModel,
-            turnId: state.currentTurnId,
-            source: { provider, rawType: 'turn_context' },
-          }) as TurnBoundaryEvent,
-        );
+        const boundary = mkEvent({
+          kind: 'turn_boundary',
+          requestIndex: state.requestIndex,
+          model: state.currentModel,
+          effort: typeof p.effort === 'string' && p.effort !== 'none' ? p.effort : undefined,
+          approvalPolicy:
+            typeof p.approval_policy === 'string' && p.approval_policy !== 'none'
+              ? p.approval_policy
+              : undefined,
+          sandboxPolicy:
+            typeof p.sandbox_policy?.type === 'string' && p.sandbox_policy.type !== 'none'
+              ? p.sandbox_policy.type
+              : undefined,
+          turnId: state.currentTurnId,
+          source: { provider, rawType: 'turn_context' },
+        }) as TurnBoundaryEvent;
+        state.boundaries.set(state.requestIndex, boundary);
+        events.push(boundary);
         break;
       }
 
@@ -523,6 +544,24 @@ export class CodexAdapter implements TraceAdapter<CodexState> {
           u.reasoningTokens = num(totals.reasoning_output_tokens);
           u.totalTokens = num(totals.total_tokens);
           u.modelRequests = state.requestIndex + 1;
+        }
+        // last_token_usage is this turn's delta — fold it into the boundary row.
+        const last = p.info?.last_token_usage;
+        if (last && typeof last === 'object' && state.requestIndex >= 0) {
+          const boundary = state.boundaries.get(state.requestIndex);
+          const inTokens = num(last.input_tokens) + num(last.cached_input_tokens);
+          const outTokens = num(last.output_tokens);
+          if (boundary) {
+            boundary.usage = {
+              inputTokens: Math.max(boundary.usage?.inputTokens ?? 0, inTokens),
+              outputTokens: Math.max(boundary.usage?.outputTokens ?? 0, outTokens),
+            };
+          }
+          const prev = state.turnUsage.get(state.requestIndex) ?? { inputTokens: 0, outputTokens: 0 };
+          state.turnUsage.set(state.requestIndex, {
+            inputTokens: Math.max(prev.inputTokens, inTokens),
+            outputTokens: Math.max(prev.outputTokens, outTokens),
+          });
         }
         state.meta.skippedTypes['token_count'] = (state.meta.skippedTypes['token_count'] ?? 0) + 1;
         break;

@@ -40,6 +40,12 @@ export interface ClaudeState extends ParserStateBase {
   requestIndex: number;
   currentTurnId?: string;
   firstUserTitle?: string;
+  /** Params seen on api-request / permission-mode lines, applied to the NEXT boundary. */
+  pendingApiModel?: string;
+  pendingEffort?: string;
+  pendingThinking?: string;
+  pendingMaxTokens?: number;
+  pendingPermissionMode?: string;
 }
 
 const CONTINUATION_PREFIXES = [
@@ -177,17 +183,27 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
         state.meta.usage.modelRequests = state.requestIndex + 1;
         if (parentKind === 'user' || parentKind === undefined) {
           // Derived boundary event so the UI renders uniform request dividers
-          // (Codex provides these natively via turn_context lines).
+          // (Codex provides these natively via turn_context lines). Carries the
+          // params collected from api-request / permission-mode lines below.
           events.push(
             mkEvent({
               kind: 'turn_boundary',
               requestIndex,
-              model,
+              model: model ?? state.pendingApiModel,
+              effort: state.pendingEffort,
+              thinking: state.pendingThinking,
+              maxTokens: state.pendingMaxTokens,
+              permissionMode: state.pendingPermissionMode,
               turnId,
               derived: true,
               source: { provider, rawType: 'assistant', rawSubtype: 'derived:turn_boundary' },
             }) as TurnBoundaryEvent,
           );
+          state.pendingApiModel = undefined;
+          state.pendingEffort = undefined;
+          state.pendingThinking = undefined;
+          state.pendingMaxTokens = undefined;
+          state.pendingPermissionMode = undefined;
         }
 
         const blocks = Array.isArray(msg.content) ? msg.content : [];
@@ -354,9 +370,78 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
         break;
       }
 
+      case 'permission-mode': {
+        // Per-request permission mode (v2.1.290+). No timestamp — annotate the
+        // NEXT boundary instead of emitting an event (the lines repeat every
+        // request, an event per line is pure noise).
+        if (typeof o.permissionMode === 'string' && o.permissionMode) state.pendingPermissionMode = o.permissionMode;
+        state.meta.skippedTypes['permission-mode'] = (state.meta.skippedTypes['permission-mode'] ?? 0) + 1;
+        break;
+      }
+
+      case 'api-request': {
+        // Request params (model / effort / thinking / max_tokens) for the NEXT
+        // boundary — repeated per request, kept on the boundary row.
+        const params = o.params && typeof o.params === 'object' ? (o.params as Record<string, any>) : undefined;
+        if (params) {
+          if (typeof params.model === 'string' && !state.pendingApiModel) state.pendingApiModel = params.model;
+          const effort = params.output_config?.effort;
+          if (typeof effort === 'string' && !state.pendingEffort) state.pendingEffort = effort;
+          const thinking = params.thinking?.type;
+          if (typeof thinking === 'string' && !state.pendingThinking) state.pendingThinking = thinking;
+          if (typeof params.max_tokens === 'number' && !state.pendingMaxTokens) state.pendingMaxTokens = params.max_tokens;
+        }
+        state.meta.skippedTypes['api-request'] = (state.meta.skippedTypes['api-request'] ?? 0) + 1;
+        break;
+      }
+
+      case 'cost-state': {
+        // Session cost/line totals, updated as the session runs — keep the latest.
+        if (typeof o.totalCostUSD === 'number') {
+          state.meta.costUSD = o.totalCostUSD;
+          state.meta.linesAdded = typeof o.totalLinesAdded === 'number' ? o.totalLinesAdded : state.meta.linesAdded;
+          state.meta.linesRemoved =
+            typeof o.totalLinesRemoved === 'number' ? o.totalLinesRemoved : state.meta.linesRemoved;
+        }
+        state.meta.skippedTypes['cost-state'] = (state.meta.skippedTypes['cost-state'] ?? 0) + 1;
+        break;
+      }
+
+      case 'pr-link': {
+        // PR(s) created/opened during this session — surfaced in the run header.
+        if (typeof o.prUrl === 'string' && o.prUrl) {
+          const label = typeof o.prNumber === 'number' ? `PR #${o.prNumber}` : 'PR';
+          if (!state.meta.prLinks.some((l) => l.url === o.prUrl)) {
+            state.meta.prLinks.push({ label, url: o.prUrl });
+          }
+        }
+        state.meta.skippedTypes['pr-link'] = (state.meta.skippedTypes['pr-link'] ?? 0) + 1;
+        break;
+      }
+
+      case 'agent-name': {
+        // Subagent display name (sessions spawned by another agent).
+        if (typeof o.agentName === 'string' && o.agentName && !state.meta.notes.includes(`agent: ${o.agentName}`)) {
+          state.meta.notes.push(`agent: ${o.agentName}`);
+        }
+        state.meta.skippedTypes['agent-name'] = (state.meta.skippedTypes['agent-name'] ?? 0) + 1;
+        break;
+      }
+
+      case 'tools-used': {
+        // Which tools the NEXT request carries — visible via the raw JSON of
+        // any event; not worth an event per repetition.
+        state.meta.skippedTypes['tools-used'] = (state.meta.skippedTypes['tools-used'] ?? 0) + 1;
+        break;
+      }
+
       case 'last-prompt':
-      case 'atis-latch': {
-        // Pure UI-recovery bookkeeping, no timestamp, no execution semantics.
+      case 'atis-latch':
+      case 'file-history-snapshot':
+      case 'file-history-delta':
+      case 'api-request-shape':
+      case 'api-request-blob': {
+        // Bookkeeping / dedup storage, no execution semantics.
         state.meta.skippedTypes[o.type] = (state.meta.skippedTypes[o.type] ?? 0) + 1;
         break;
       }
