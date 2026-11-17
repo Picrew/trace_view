@@ -272,6 +272,11 @@ async function loadRun(ctx: Ctx, runId: string) {
   }
   if (!summary) return null;
   const handle = await parseTraceFile(summary.filePath, { provider: summary.provider });
+  // Codex rollouts carry no title — match the detail view to the list by
+  // applying the same session-index title the scan used.
+  if (handle.parsed.run.provider === 'codex' && summary.title !== handle.parsed.run.fileName) {
+    handle.parsed.run.title = summary.title;
+  }
   return ctx.cache.put(handle);
 }
 

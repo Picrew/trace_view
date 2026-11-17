@@ -151,7 +151,7 @@ export function buildDerived(input: {
   const agents = new Set<string>();
   let lastTimestampMs: number | undefined;
   let firstTimestampMs: number | undefined;
-  let title = meta.title;
+  let title = meta.title || meta.aiTitle;
 
   // Model request spans: [turn_boundary(N) .. last event of request N].
   let currentSpan: TimelineSpan | null = null;
@@ -346,6 +346,10 @@ function projectFromPath(filePath: string): string {
 export async function summarizeTraceFile(
   filePath: string,
   provider?: TraceProvider,
+  opts: {
+    /** Resolves a provider session id to its official UI title (Codex: session_index thread_name). */
+    titleResolver?: (provider: TraceProvider, sessionId: string) => Promise<string | undefined>;
+  } = {},
 ): Promise<SessionSummary | null> {
   if (provider === 'opencode' || (provider === undefined && looksLikeOpencodeSession(filePath))) {
     return summarizeOpencodeSession(filePath);
@@ -368,7 +372,13 @@ export async function summarizeTraceFile(
   const adapter = provider ? getAdapter(provider) : detectAdapter(head);
 
   // Lightweight pass over head lines for title/models/cwd.
+  // Claude Code title lines ("custom-title"/"ai-title") repeat and refresh as the
+  // session grows — the UI shows the latest, so title-line values overwrite each
+  // other (user-set custom-title wins over everything). A first-user-message
+  // fallback only applies until a real title line shows up.
   let title: string | undefined;
+  let titleIsDefinitive = false; // user-set custom-title: later titles never override
+  let sawTitleLine = false; // custom-title / ai-title seen (vs. user-message fallback)
   let cwd: string | undefined;
   let gitBranch: string | undefined;
   const models = new Set<string>();
@@ -389,18 +399,60 @@ export async function summarizeTraceFile(
       if (typeof o.payload.cwd === 'string') cwd = o.payload.cwd;
       if (typeof o.payload.git?.branch === 'string') gitBranch = o.payload.git.branch;
     }
-    if (!title) {
-      const t = headTitleOf(o);
-      if (t) title = t;
+    const t = headTitleOf(o);
+    if (t) {
+      if (t.definitive) {
+        title = t.text;
+        titleIsDefinitive = true;
+        sawTitleLine = true;
+      } else if (t.isTitleLine) {
+        sawTitleLine = true;
+        if (!titleIsDefinitive) title = t.text; // latest ai-title wins
+      } else if (!title && !sawTitleLine) {
+        title = t.text; // first-user-message fallback only
+      }
     }
   }
 
   let endedAt: string | undefined;
+  let tail: Awaited<ReturnType<typeof readTailLines>> | undefined;
   try {
-    const tail = await readTailLines(filePath, 128 * 1024);
+    tail = await readTailLines(filePath, 256 * 1024);
     endedAt = tail.lastTimestamp;
   } catch {
     /* ignore */
+  }
+
+  // Large Claude Code sessions push their title lines past the head budget —
+  // the CLI keeps rewriting them near the end of the file, so a title seen in
+  // the tail (newest) beats the head scan.
+  if (tail && (!sawTitleLine || !titleIsDefinitive)) {
+    for (let i = tail.lines.length - 1; i >= 0; i--) {
+      const line = tail.lines[i];
+      if (!line || typeof line !== 'object') continue;
+      const t = headTitleOf(line as Record<string, any>);
+      if (t?.isTitleLine && !t.definitive) {
+        if (!titleIsDefinitive) title = t.text; // latest ai-title wins
+        break;
+      }
+      if (t?.definitive) {
+        title = t.text; // user-set custom-title beats everything
+        titleIsDefinitive = true;
+        sawTitleLine = true;
+        break;
+      }
+    }
+  }
+
+  // Codex rollouts carry no title lines — the official UI title comes from the
+  // session index and outranks the first-user-message fallback.
+  if (sessionId && opts.titleResolver && adapter.id === 'codex') {
+    try {
+      const official = (await opts.titleResolver(adapter.id, sessionId)) ?? undefined;
+      if (official && !titleIsDefinitive) title = official;
+    } catch {
+      /* index unavailable → keep the fallback title */
+    }
   }
 
   return {
@@ -476,19 +528,29 @@ async function summarizeOpencodeSession(filePath: string): Promise<SessionSummar
   };
 }
 
-function headTitleOf(o: Record<string, any>): string | undefined {
+function headTitleOf(
+  o: Record<string, any>,
+): { text: string; isTitleLine: boolean; definitive: boolean } | undefined {
   // Claude Code human prompt.
   if (o.type === 'user' && typeof o.message?.content === 'string' && o.origin?.kind === 'human') {
-    return oneLine(o.message.content, 120);
+    return { text: oneLine(o.message.content, 120), isTitleLine: false, definitive: false };
   }
-  if (o.type === 'custom-title' && typeof o.customTitle === 'string') return oneLine(o.customTitle, 120);
+  if (o.type === 'custom-title' && typeof o.customTitle === 'string') {
+    return { text: oneLine(o.customTitle, 120), isTitleLine: true, definitive: true };
+  }
+  // Claude Code v2.1.270+: CLI-generated title, refreshed as the session grows.
+  if (o.type === 'ai-title' && typeof o.aiTitle === 'string') {
+    return { text: oneLine(o.aiTitle, 120), isTitleLine: true, definitive: false };
+  }
   // Codex user message (not an injected context block).
   if (o.type === 'response_item' && o.payload?.type === 'message' && o.payload?.role === 'user') {
     const text = Array.isArray(o.payload.content)
       ? o.payload.content.map((b: any) => (typeof b?.text === 'string' ? b.text : '')).join('\n').trim()
       : '';
     const trimmed = text.trimStart();
-    if (text && !trimmed.startsWith('<') && !trimmed.startsWith('# Files mentioned')) return oneLine(text, 120);
+    if (text && !trimmed.startsWith('<') && !trimmed.startsWith('# Files mentioned')) {
+      return { text: oneLine(text, 120), isTitleLine: false, definitive: false };
+    }
   }
   // pi user message.
   if (o.type === 'message' && o.message?.role === 'user' && Array.isArray(o.message.content)) {
@@ -496,7 +558,7 @@ function headTitleOf(o: Record<string, any>): string | undefined {
       .map((b: any) => (b?.type === 'text' && typeof b.text === 'string' ? b.text : ''))
       .join('\n')
       .trim();
-    if (text) return oneLine(text, 120);
+    if (text) return { text: oneLine(text, 120), isTitleLine: false, definitive: false };
   }
   return undefined;
 }

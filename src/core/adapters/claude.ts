@@ -346,6 +346,14 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
         break;
       }
 
+      case 'ai-title': {
+        // Claude Code v2.1.270+ writes the resume-list title here, refreshed as
+        // the conversation evolves — keep the LAST value to match the UI.
+        if (typeof o.aiTitle === 'string' && o.aiTitle) state.meta.aiTitle = o.aiTitle;
+        state.meta.skippedTypes['ai-title'] = (state.meta.skippedTypes['ai-title'] ?? 0) + 1;
+        break;
+      }
+
       case 'last-prompt':
       case 'atis-latch': {
         // Pure UI-recovery bookkeeping, no timestamp, no execution semantics.
@@ -371,6 +379,9 @@ export class ClaudeAdapter implements TraceAdapter<ClaudeState> {
     if (state.meta.badLines > 0) {
       state.meta.warnings.push(`${state.meta.badLines} unparseable line(s)`);
     }
+    // A user-set custom title beats the CLI-generated ai-title; both beat the
+    // first user message. Matches what `claude --resume` shows.
+    if (!state.meta.title && state.meta.aiTitle) state.meta.title = state.meta.aiTitle;
     if (!state.meta.title && state.firstUserTitle) state.meta.title = state.firstUserTitle;
     if (!state.meta.project && state.meta.cwd) {
       state.meta.project = state.meta.cwd.split('/').filter(Boolean).pop() ?? state.meta.cwd;

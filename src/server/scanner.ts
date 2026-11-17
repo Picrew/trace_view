@@ -4,6 +4,7 @@ import os from 'node:os';
 import type { DiscoveredSession, SessionSummary, TraceProvider } from '../core/schema.js';
 import { summarizeTraceFile } from '../core/run-builder.js';
 import { isZstdPath, ZSTD_SUPPORTED } from '../core/reader.js';
+import { CodexTitleIndex } from './codex-index.js';
 
 /** Persisted per-file summary cache to keep library scans cheap. */
 interface CacheFile {
@@ -39,6 +40,8 @@ export class Library {
   private cachePath: string;
   private lastScanMs = 0;
   private scanning: Promise<void> | null = null;
+  private codexTitles = new CodexTitleIndex();
+  private lastCodexIndexStats: { mtimeMs: number; size: number } | null = null;
 
   constructor(private dirs: LibraryDirs) {
     this.cachePath = path.join(os.homedir(), '.trace-review', 'cache.json');
@@ -127,6 +130,14 @@ export class Library {
     }
     dropShadowedZst(files);
 
+    // Codex titles come from session_index.jsonl, not the rollout files — when
+    // the index changed, cached rollout summaries hold stale titles.
+    const idxStats = this.codexTitles.stats();
+    const codexIndexChanged = this.lastCodexIndexStats
+      ? idxStats.mtimeMs !== this.lastCodexIndexStats.mtimeMs || idxStats.size !== this.lastCodexIndexStats.size
+      : false;
+    this.lastCodexIndexStats = idxStats;
+
     const summaries: SessionSummary[] = [];
     const CONCURRENCY = 16;
     const queue = [...files];
@@ -145,7 +156,8 @@ export class Library {
           !force &&
           cached &&
           cached.size === st.size &&
-          cached.mtimeMs === st.mtimeMs
+          cached.mtimeMs === st.mtimeMs &&
+          !(codexIndexChanged && cached.summary.provider === 'codex')
         ) {
           // Refresh only the `live` flag.
           cached.summary.live = Date.now() - st.mtimeMs < 5 * 60 * 1000;
@@ -156,6 +168,10 @@ export class Library {
           const summary = await summarizeTraceFile(
             file,
             opencodeFiles.has(file) ? 'opencode' : undefined,
+            {
+              titleResolver: async (provider, sessionId) =>
+                provider === 'codex' ? this.codexTitles.get(sessionId) : undefined,
+            },
           );
           if (summary) {
             this.cache.set(file, { size: st.size, mtimeMs: st.mtimeMs, summary });
